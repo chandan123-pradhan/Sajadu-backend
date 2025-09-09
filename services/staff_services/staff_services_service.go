@@ -25,3 +25,11 @@ func VerifyOtpToStartService(bookingId string, stafOtp string, key string) error
 	return staffrepo.VerifyToStartService(
 		bookingId,stafOtp,key,)
 }
+
+func UpdateStaffLocation(staffID, bookingID string, latitude, longitude float64) error {
+    return staffrepo.SaveStaffLocation(staffID, bookingID, latitude, longitude)
+}
+
+func GetPartnerLocationByBookingID(bookingID string) (staffmodel.PartnerLocationResponse, error) {
+	return staffrepo.FetchPartnerLocation(bookingID)
+}

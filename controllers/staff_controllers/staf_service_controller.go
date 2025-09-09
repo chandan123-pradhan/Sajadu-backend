@@ -94,3 +94,65 @@ func VerifyStaffOTP(w http.ResponseWriter, r *http.Request) {
 	// Success response
 	utils.SendResponse(w, http.StatusOK, true, nil, "OTP verified successfully, booking status updated to In Progress")
 }
+
+
+func UpdateStaffLocation(w http.ResponseWriter, r *http.Request) {
+    // Validate staff token
+    staffID, err := utils.ValidateStaffToken(r)
+    if err != nil {
+        utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized: "+err.Error())
+        return
+    }
+
+    // Parse request body
+    var req staffmodel.UpdateLocationRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body: "+err.Error())
+        return
+    }
+
+    if req.BookingID == "" || req.Latitude == 0 || req.Longitude == 0 {
+        utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "BookingID, Latitude, and Longitude are required")
+        return
+    }
+
+    // Call service layer
+    err = staffservices.UpdateStaffLocation(staffID, req.BookingID, req.Latitude, req.Longitude)
+    if err != nil {
+        utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to update location: "+err.Error())
+        return
+    }
+
+    // Success response
+    utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{}, "Location updated successfully")
+}
+
+
+
+
+func GetPartnerLiveLocation(w http.ResponseWriter, r *http.Request) {
+
+	_, err := utils.ValidateStaffToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized: "+err.Error())
+		return
+	}
+
+	// ✅ Get booking_id from URL params
+	vars := mux.Vars(r)
+	bookingID := vars["id"]
+	if bookingID == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "booking_id is required")
+		return
+	}
+
+	// ✅ Call service layer
+	location, err := staffservices.GetPartnerLocationByBookingID(bookingID)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to fetch live location: "+err.Error())
+		return
+	}
+
+	// ✅ Success response
+	utils.SendResponse(w, http.StatusOK, true, location, "Live location fetched successfully")
+}

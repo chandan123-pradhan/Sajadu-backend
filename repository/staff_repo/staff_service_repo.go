@@ -278,3 +278,44 @@ func VerifyToStartService(bookingID string, staffOTP string, key string) error {
 
 	return nil
 }
+
+
+func SaveStaffLocation(staffID, bookingID string, latitude, longitude float64) error {
+    query := `
+        INSERT INTO service_partner_location (location_id, staff_id, booking_id, latitude, longitude)
+        VALUES (UUID(), ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE latitude=?, longitude=?, updated_at=NOW()
+    `
+    _, err := config.DB.Exec(query, staffID, bookingID, latitude, longitude, latitude, longitude)
+    return err
+}
+
+
+
+func FetchPartnerLocation(bookingID string) (staffmodel.PartnerLocationResponse, error) {
+    var location staffmodel.PartnerLocationResponse
+
+    query := `
+        SELECT spl.staff_id, spl.booking_id, spl.latitude, spl.longitude, spl.updated_at
+        FROM service_partner_location spl
+        WHERE spl.booking_id = ?
+        ORDER BY spl.updated_at DESC
+        LIMIT 1
+    `
+
+    err := config.DB.QueryRow(query, bookingID).Scan(
+        &location.PartnerID,
+        &location.BookingID,
+        &location.Latitude,
+        &location.Longitude,
+        &location.UpdatedAt,
+    )
+
+    if err == sql.ErrNoRows {
+        return location, errors.New("no location found for this booking")
+    } else if err != nil {
+        return location, err
+    }
+
+    return location, nil
+}
