@@ -3,9 +3,12 @@ package userrepo
 import (
 	"database/sql"
 	"decoration_project/config"
+	commonmodel "decoration_project/models/common_model"
+	// staffmodel "decoration_project/models/staff_model"
 	usermodels "decoration_project/models/user_models"
 	"decoration_project/utils"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -125,36 +128,41 @@ func CreateBooking(req usermodels.BookingRequest) (usermodels.BookingResponse, e
 // GetUserBookings fetches all bookings of a given user
 func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, error) {
 	query := `
-		SELECT 
-			b.booking_id,
-			b.user_id,
-			b.restaurant_id,
-			b.service_id,
-			s.status_name,
-			b.scheduled_date,
-			b.address,
-			b.pincode,
-			b.state,
-			b.city,
-			b.service_name,
-			b.created_at,
-			b.start_verified,
-			b.complete_otp_hash,
+	SELECT 
+		b.booking_id,
+		b.user_id,
+		b.restaurant_id,
+		b.service_id,
+		s.status_name,
+		b.scheduled_date,
+		b.address,
+		b.pincode,
+		b.state,
+		b.city,
+		b.service_name,
+		b.created_at,
+		b.start_verified,
+		b.complete_otp_hash,
 
-			-- Payment details (may be NULL if no payment yet)
-			p.payment_id,
-			COALESCE(p.amount, 0),
-			COALESCE(p.currency, ''),
-			COALESCE(p.payment_mode, ''),
-			COALESCE(p.transaction_id, ''),
-			p.payment_date,
-			COALESCE(p.payment_status, '')
-		FROM bookings b
-		JOIN booking_status s ON b.status_id = s.status_id
-		LEFT JOIN payments p ON b.booking_id = p.booking_id
-		WHERE b.user_id = ?
-		ORDER BY b.created_at DESC
-	`
+		-- Payment details (may be NULL if no payment yet)
+		MAX(p.payment_id),
+		COALESCE(MAX(p.amount), 0),
+		COALESCE(MAX(p.currency), ''),
+		COALESCE(MAX(p.payment_mode), ''),
+		COALESCE(MAX(p.transaction_id), ''),
+		MAX(p.payment_date),
+		COALESCE(MAX(p.payment_status), ''),
+
+		-- ✅ Fetch service images (aggregated)
+		COALESCE(GROUP_CONCAT(si.image_url), '')
+	FROM bookings b
+	JOIN booking_status s ON b.status_id = s.status_id
+	LEFT JOIN payments p ON b.booking_id = p.booking_id
+	LEFT JOIN service_images si ON b.service_id = si.service_id
+	WHERE b.user_id = ?
+	GROUP BY b.booking_id
+	ORDER BY b.created_at DESC
+`
 
 	rows, err := config.DB.Query(query, userID)
 	if err != nil {
@@ -171,6 +179,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 		var paymentDate sql.NullTime
 		var amount sql.NullFloat64
 		var startVerified bool
+		var serviceImages sql.NullString
 
 		err := rows.Scan(
 			&booking.BookingID,
@@ -194,6 +203,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 			&transactionID,
 			&paymentDate,
 			&paymentStatus,
+			&serviceImages, // NEW
 		)
 		if err != nil {
 			return usermodels.UserBookingsWrapper{Bookings: []usermodels.BookingResponse{}}, err
@@ -230,6 +240,13 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 			}
 		}
 
+		// Parse service images
+		if serviceImages.Valid && serviceImages.String != "" {
+			booking.Images = strings.Split(serviceImages.String, ",")
+		} else {
+			booking.Images = []string{}
+		}
+
 		bookings = append(bookings, booking)
 	}
 
@@ -238,4 +255,156 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 	}
 
 	return usermodels.UserBookingsWrapper{Bookings: bookings}, nil
+}
+
+
+
+
+// GetBookingDetails fetches full details of a specific booking (without OTP & Staff mandatory)
+func GetBookingDetails(bookingID string) (usermodels.GetUsersBookingDetailsResponse, error) {
+	query := `
+	SELECT 
+		b.booking_id,
+		u.staff_id,
+		u.name,
+		u.whatsapp_no,
+		u.image_url,
+
+		b.service_id,
+		b.service_name,
+		rs.service_description,
+		COALESCE(rs.service_price, 0),
+		COALESCE(rs.items, JSON_ARRAY()),
+
+		s.status_name,
+		b.scheduled_date,
+		b.address,
+		b.pincode,
+		b.state,
+		b.city,
+		b.latitude,
+		b.longitude,
+		b.created_at,
+
+		p.payment_id,
+		COALESCE(p.amount,0),
+		COALESCE(p.currency,''),
+		COALESCE(p.payment_mode,''),
+		COALESCE(p.transaction_id,''),
+		p.payment_date,
+		COALESCE(p.payment_status,'')
+	FROM bookings b
+	JOIN booking_status s ON b.status_id = s.status_id
+	LEFT JOIN Restaurant_Staff u ON b.staff_id = u.staff_id
+	LEFT JOIN Restaurant_Services rs ON b.service_id = rs.service_id
+	LEFT JOIN payments p ON b.booking_id = p.booking_id
+	WHERE b.booking_id = ?
+	`
+
+	row := config.DB.QueryRow(query, bookingID)
+
+	var booking usermodels.GetUsersBookingDetailsResponse
+	var payment usermodels.PaymentResponse
+
+	// Nullable fields
+	var serviceDesc sql.NullString
+	var items sql.NullString
+	var paymentID, transactionID, paymentMethod, currency, paymentStatus sql.NullString
+	var paymentDate sql.NullTime
+	var amount sql.NullFloat64
+
+	// Staff nullable
+	// var staff commonmodel.StaffBasic
+	var staffID, staffName, staffPhone, staffImg sql.NullString
+
+	err := row.Scan(
+		&booking.BookingID,
+		&staffID,
+		&staffName,
+		&staffPhone,
+		&staffImg,
+
+		&booking.ServiceID,
+		&booking.ServiceName,
+		&serviceDesc,
+		&booking.ServicePrice,
+		&items,
+
+		&booking.Status,
+		&booking.ScheduledDate,
+		&booking.Address,
+		&booking.Pincode,
+		&booking.State,
+		&booking.City,
+		&booking.Latitude,
+		&booking.Longitude,
+		&booking.CreatedAt,
+
+		&paymentID,
+		&amount,
+		&currency,
+		&paymentMethod,
+		&transactionID,
+		&paymentDate,
+		&paymentStatus,
+	)
+	if err != nil {
+		return usermodels.GetUsersBookingDetailsResponse{}, err
+	}
+
+if staffID.Valid {
+		booking.User = commonmodel.StaffBasic{
+			StaffID: &staffID.String,
+			Name:    &staffName.String,
+			Phone:   &staffPhone.String,
+			Images:  &staffImg.String,
+		}
+	} else {
+		fmt.Println("emtpy")
+		// Staff not assigned → empty object
+		booking.User = commonmodel.StaffBasic{}
+	}
+
+	// Service description
+	if serviceDesc.Valid {
+		booking.ServiceDescription = serviceDesc.String
+	}
+
+	// Items (JSON stored as string)
+	if items.Valid {
+		booking.Items = items.String
+	}
+
+	// Assign payment if available
+	if paymentID.Valid {
+		payment.PaymentID = paymentID.String
+		payment.Amount = amount.Float64
+		payment.Currency = currency.String
+		payment.PaymentMethod = paymentMethod.String
+		payment.TransactionID = transactionID.String
+		payment.PaymentStatus = paymentStatus.String
+		if paymentDate.Valid {
+			payment.PaymentDate = paymentDate.Time
+		}
+		booking.Payment = &payment
+	} else {
+		booking.Payment = nil
+	}
+
+	// Fetch service images
+	imgQuery := `SELECT image_url FROM Service_Images WHERE service_id = ?`
+	rows, err := config.DB.Query(imgQuery, booking.ServiceID)
+	if err == nil {
+		defer rows.Close()
+		var images []string
+		for rows.Next() {
+			var img string
+			if err := rows.Scan(&img); err == nil {
+				images = append(images, img)
+			}
+		}
+		booking.Images = images
+	}
+
+	return booking, nil
 }

@@ -25,6 +25,7 @@ func InitializeRoutes() *mux.Router {
 	router.HandleFunc("/users/book-service", usercontroller.CreateBooking).Methods("POST")
 	router.HandleFunc("/users/get-bookings", usercontroller.GetUsersBookings).Methods("GET")
 	router.HandleFunc("/users/get-service-details", usercontroller.GetServiceDetails).Methods("POST")
+	router.HandleFunc("/users/get-bookings/{id}", usercontroller.GetBookingDetails).Methods("GET")	
 	// Restorant APIS.
 
 	router.HandleFunc("/restorant/create_account", restorantcontrollers.RegisterRestaurant).Methods("POST")

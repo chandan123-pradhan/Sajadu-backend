@@ -56,6 +56,7 @@ type BookingResponse struct {
 	City          string           `json:"city"`
 	CreatedAt     time.Time        `json:"created_at"`
 	Payment       *PaymentResponse `json:"payment,omitempty"` // nil if no payment
+	Images []string `json:"images"`
 }
 
 

@@ -74,3 +74,50 @@ func GetServicesBasedOnCategory(w http.ResponseWriter, r *http.Request) {
 	}, "Services fetched successfully")
 
 }
+
+
+
+
+func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
+	// Validate JWT token
+	_, err := utils.ValidateToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized: "+err.Error())
+		return
+	}
+
+	// Decode request body
+	err = json.NewDecoder(r.Body).Decode(&usermodels.GetServiceDetailsRequest)
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body")
+		return
+	}
+
+	// Validate required fields
+	if usermodels.GetServiceDetailsRequest.RestaurantId == "" || usermodels.GetServiceDetailsRequest.ServiceId == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Restaurant ID and Service ID are required")
+		return
+	}
+
+	// Call service layer
+	serviceWithRest, err := userservices.GetServiceDetails(
+		usermodels.GetServiceDetailsRequest.RestaurantId,
+		usermodels.GetServiceDetailsRequest.ServiceId,
+	)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to fetch details: "+err.Error())
+		return
+	}
+
+	// If not found
+	if serviceWithRest.Service.ServiceID == "" {
+		utils.SendResponse(w, http.StatusNotFound, false, map[string]interface{}{}, "No service found for given Restaurant ID and Service ID")
+		return
+	}
+
+	// Success response
+	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
+		"service":    serviceWithRest.Service,
+		"restaurant": serviceWithRest.Restaurant,
+	}, "Service details fetched successfully")
+}

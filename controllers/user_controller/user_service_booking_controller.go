@@ -2,11 +2,14 @@ package usercontroller
 
 import (
 	usermodels "decoration_project/models/user_models"
+	// staffservices "decoration_project/services/staff_services"
 	userservices "decoration_project/services/user_services"
 	"decoration_project/utils"
 	"encoding/json"
 	"net/http"
 	"os"
+
+	"github.com/gorilla/mux"
 )
 
 
@@ -75,46 +78,34 @@ func GetUsersBookings(w http.ResponseWriter, r *http.Request) {
 
 
 
-func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
-	// Validate JWT token
+
+func GetBookingDetails(w http.ResponseWriter, r *http.Request) {
+	// Validate JWT token and get userId
 	_, err := utils.ValidateToken(r)
 	if err != nil {
 		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized: "+err.Error())
 		return
 	}
 
-	// Decode request body
-	err = json.NewDecoder(r.Body).Decode(&usermodels.GetServiceDetailsRequest)
-	if err != nil {
-		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body")
-		return
-	}
-
-	// Validate required fields
-	if usermodels.GetServiceDetailsRequest.RestaurantId == "" || usermodels.GetServiceDetailsRequest.ServiceId == "" {
-		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Restaurant ID and Service ID are required")
+	// Get booking_id from URL
+	vars := mux.Vars(r)
+	bookingID := vars["id"]
+	if bookingID == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "booking_id is required")
 		return
 	}
 
 	// Call service layer
-	serviceWithRest, err := userservices.GetServiceDetails(
-		usermodels.GetServiceDetailsRequest.RestaurantId,
-		usermodels.GetServiceDetailsRequest.ServiceId,
-	)
+	booking, err := userservices.FetchBookingDetails(bookingID)
 	if err != nil {
-		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to fetch details: "+err.Error())
-		return
-	}
-
-	// If not found
-	if serviceWithRest.Service.ServiceID == "" {
-		utils.SendResponse(w, http.StatusNotFound, false, map[string]interface{}{}, "No service found for given Restaurant ID and Service ID")
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to fetch booking details: "+err.Error())
 		return
 	}
 
 	// Success response
-	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
-		"service":    serviceWithRest.Service,
-		"restaurant": serviceWithRest.Restaurant,
-	}, "Service details fetched successfully")
+	utils.SendResponse(w, http.StatusOK, true, booking, "Booking details fetched successfully")
+	
+
 }
+
+
