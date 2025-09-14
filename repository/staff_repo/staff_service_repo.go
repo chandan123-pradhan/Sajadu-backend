@@ -3,7 +3,6 @@ package staffrepo
 import (
 	"database/sql"
 	"decoration_project/config"
-	restorantmodels "decoration_project/models/restorant_models"
 	staffmodel "decoration_project/models/staff_model"
 	usermodels "decoration_project/models/user_models"
 	"decoration_project/utils"
@@ -107,8 +106,9 @@ func GetAssignedBookings(staffID string) (staffmodel.AssignedBookingsWrapper, er
 	return staffmodel.AssignedBookingsWrapper{Bookings: bookings}, nil
 }
 
-// GetRestaurantBookingDetails fetches full details of a specific booking
-func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetailsResponse, error) {
+
+// GetAssignedServiceDetails fetches full details of a specific booking (without OTP & Staff)
+func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServicesDetails, error) {
 	query := `
 	SELECT 
 		b.booking_id,
@@ -119,6 +119,10 @@ func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetails
 
 		b.service_id,
 		b.service_name,
+		rs.service_description,
+		COALESCE(rs.service_price, 0),
+		COALESCE(rs.items, JSON_ARRAY()),
+
 		s.status_name,
 		b.scheduled_date,
 		b.address,
@@ -128,7 +132,6 @@ func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetails
 		b.latitude,
 		b.longitude,
 		b.created_at,
-
 
 		p.payment_id,
 		COALESCE(p.amount,0),
@@ -140,19 +143,20 @@ func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetails
 	FROM bookings b
 	JOIN booking_status s ON b.status_id = s.status_id
 	JOIN users u ON b.user_id = u.user_id
-	LEFT JOIN Restaurant_Staff rs ON rs.staff_id = b.staff_id
+	JOIN Restaurant_Services rs ON b.service_id = rs.service_id
 	LEFT JOIN payments p ON b.booking_id = p.booking_id
 	WHERE b.booking_id = ?
 	`
 
 	row := config.DB.QueryRow(query, bookingID)
 
-	var booking restorantmodels.BookingDetailsResponse
+	var booking staffmodel.StaffAssignedServicesDetails
 	var user usermodels.UserDetailsModel
-	var staff restorantmodels.StaffDetails
 	var payment usermodels.PaymentResponse
 
-	var staffID, staffName, staffWhatsapp, staffDesignation, staffEmail, staffDescription, staffImage sql.NullString
+	// Nullable fields
+	var serviceDesc sql.NullString
+	var items sql.NullString
 	var paymentID, transactionID, paymentMethod, currency, paymentStatus sql.NullString
 	var paymentDate sql.NullTime
 	var amount sql.NullFloat64
@@ -162,10 +166,14 @@ func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetails
 		&user.UserID,
 		&user.FullName,
 		&user.Email,
-		&user.Email,
+		&user.MobileNumber,
 
 		&booking.ServiceID,
 		&booking.ServiceName,
+		&serviceDesc,
+		&booking.ServicePrice,
+		&items,
+
 		&booking.Status,
 		&booking.ScheduledDate,
 		&booking.Address,
@@ -185,24 +193,20 @@ func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetails
 		&paymentStatus,
 	)
 	if err != nil {
-		return restorantmodels.BookingDetailsResponse{}, err
+		return staffmodel.StaffAssignedServicesDetails{}, err
 	}
 
 	// Assign user
 	booking.User = user
 
-	// Assign staff if available
-	if staffID.Valid {
-		staff.StaffID = staffID.String
-		staff.Name = staffName.String
-		staff.WhatsappNo = staffWhatsapp.String
-		staff.Designation = staffDesignation.String
-		staff.Email = staffEmail.String
-		staff.Description = staffDescription.String
-		staff.ImageURL = staffImage.String
-		booking.Staff = &staff
-	} else {
-		booking.Staff = nil
+	// Service description
+	if serviceDesc.Valid {
+		booking.ServiceDescription = serviceDesc.String
+	}
+
+	// Items (JSON stored as string)
+	if items.Valid {
+		booking.Items = items.String
 	}
 
 	// Assign payment if available
@@ -221,8 +225,25 @@ func GetAssignedServiceDetails(bookingID string) (restorantmodels.BookingDetails
 		booking.Payment = nil
 	}
 
+	// Fetch service images
+	imgQuery := `SELECT image_url FROM Service_Images WHERE service_id = ?`
+	rows, err := config.DB.Query(imgQuery, booking.ServiceID)
+	if err == nil {
+		defer rows.Close()
+		var images []string
+		for rows.Next() {
+			var img string
+			if err := rows.Scan(&img); err == nil {
+				images = append(images, img)
+			}
+		}
+		booking.Images = images
+	}
+
 	return booking, nil
 }
+
+
 // VerifyToStartService verifies the staff OTP and updates booking status to "In Progress"
 // and generates the completion OTP for the user
 func VerifyToStartService(bookingID string, staffOTP string, key string) error {

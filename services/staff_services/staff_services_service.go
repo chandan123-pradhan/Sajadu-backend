@@ -1,7 +1,6 @@
 package staffservices
 
 import (
-	restorantmodels "decoration_project/models/restorant_models"
 	staffmodel "decoration_project/models/staff_model"
 	staffrepo "decoration_project/repository/staff_repo"
 )
@@ -14,7 +13,7 @@ func GetAssignedServices(restorantId string) (staffmodel.AssignedBookingsWrapper
 
 
 
-func GetAssignedServiesDetails(bookingId string) (restorantmodels.BookingDetailsResponse, error) {
+func GetAssignedServiesDetails(bookingId string) (staffmodel.StaffAssignedServicesDetails, error) {
 	// Call repository to fetch bookings
 	return staffrepo.GetAssignedServiceDetails(bookingId)
 }
