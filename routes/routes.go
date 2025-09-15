@@ -48,7 +48,8 @@ func InitializeRoutes() *mux.Router {
 	router.HandleFunc("/staff/start-service", staffcontrollers.VerifyStaffOTP).Methods("POST")
 	router.HandleFunc("/staff/update-location", staffcontrollers.UpdateStaffLocation).Methods("POST")
 	router.HandleFunc("/staff/booking/{id}/location", staffcontrollers.GetPartnerLiveLocation).Methods("GET")
-
+	router.HandleFunc("/staff/complete-service", staffcontrollers.VerifyCompletionOTP).Methods("POST")
+  
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	return router

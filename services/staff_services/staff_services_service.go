@@ -32,3 +32,9 @@ func UpdateStaffLocation(staffID, bookingID string, latitude, longitude float64)
 func GetPartnerLocationByBookingID(bookingID string) (staffmodel.PartnerLocationResponse, error) {
 	return staffrepo.FetchPartnerLocation(bookingID)
 }
+func VerifyOtpToCompleteService(bookingId string, stafOtp string, key string) error {
+	// Call repository to verify OTP and update status → Completed
+	return staffrepo.VerifyToCompleteService(
+		bookingId, stafOtp, key,
+	)
+}

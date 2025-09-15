@@ -340,3 +340,50 @@ func FetchPartnerLocation(bookingID string) (staffmodel.PartnerLocationResponse,
 
     return location, nil
 }
+
+// VerifyToCompleteService verifies the completion OTP and updates booking status to "Completed"
+func VerifyToCompleteService(bookingID string, staffOTP string, key string) error {
+	// 1. Fetch encrypted completion OTP, current status, and completion_verified flag
+	var encryptedCompleteOTP string
+	var statusID int
+	var completeVerified bool
+
+	query := `SELECT complete_otp_hash, status_id, complete_verified 
+	          FROM bookings WHERE booking_id = ?`
+	err := config.DB.QueryRow(query, bookingID).Scan(&encryptedCompleteOTP, &statusID, &completeVerified)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("booking not found")
+		}
+		return err
+	}
+
+	// 2. Check if already completed
+	if completeVerified || statusID == 5 {
+		return errors.New("service already completed or OTP already verified")
+	}
+
+	// 3. Decrypt OTP
+	decryptedOTP, err := utils.DecryptOTP(encryptedCompleteOTP, key)
+	if err != nil {
+		return errors.New("failed to decrypt completion OTP")
+	}
+
+	// 4. Compare OTP
+	if decryptedOTP != staffOTP {
+		return errors.New("invalid OTP")
+	}
+
+	// 5. Update booking status to Completed (status_id = 5), mark completion_verified
+	updateQuery := `
+		UPDATE bookings 
+		SET status_id = 5, complete_verified = TRUE, updated_at = CURRENT_TIMESTAMP
+		WHERE booking_id = ?
+	`
+	_, err = config.DB.Exec(updateQuery, bookingID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -156,3 +156,45 @@ func GetPartnerLiveLocation(w http.ResponseWriter, r *http.Request) {
 	// ✅ Success response
 	utils.SendResponse(w, http.StatusOK, true, location, "Live location fetched successfully")
 }
+
+
+
+
+// ✅ Verify OTP and mark booking as Completed
+func VerifyCompletionOTP(w http.ResponseWriter, r *http.Request) {
+	// Validate staff token
+	_, err := utils.ValidateStaffToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized: "+err.Error())
+		return
+	}
+
+	// Parse request body
+	var req staffmodel.VerifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.BookingID == "" || req.OTP == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "BookingID and OTP are required")
+		return
+	}
+
+	// Read OTP encryption key from environment
+	key := os.Getenv("OTP_ENCRYPTION_KEY")
+	if len(key) != 32 {
+		utils.SendResponse(w, http.StatusInternalServerError, false, nil, "Invalid OTP encryption key configuration")
+		return
+	}
+
+	// Call service layer → verify OTP & complete booking
+	err = staffservices.VerifyOtpToCompleteService(req.BookingID, req.OTP, key)
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "OTP verification failed: "+err.Error())
+		return
+	}
+
+	// ✅ Success response
+	utils.SendResponse(w, http.StatusOK, true, nil, "OTP verified successfully, booking status updated to Completed")
+}
