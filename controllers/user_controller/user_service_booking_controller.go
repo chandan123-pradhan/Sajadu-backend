@@ -2,6 +2,7 @@ package usercontroller
 
 import (
 	usermodels "decoration_project/models/user_models"
+	"fmt"
 	// staffservices "decoration_project/services/staff_services"
 	userservices "decoration_project/services/user_services"
 	"decoration_project/utils"
@@ -60,10 +61,12 @@ func GetUsersBookings(w http.ResponseWriter, r *http.Request) {
 
 	// Read OTP encryption key from environment
 	key := os.Getenv("OTP_ENCRYPTION_KEY")
+	fmt.Println("OTP_ENCRYPTION_KEY:", key, "Length:", len(key))
 	if len(key) != 32 {
 		utils.SendResponse(w, http.StatusInternalServerError, false, nil, "Invalid OTP encryption key configuration")
 		return
 	}
+	
 	// Call service layer to get bookings
 	bookings, err := userservices.FetchBookings(userId,key)
 	if err != nil {
