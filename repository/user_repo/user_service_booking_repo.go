@@ -158,7 +158,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 	FROM bookings b
 	JOIN booking_status s ON b.status_id = s.status_id
 	LEFT JOIN payments p ON b.booking_id = p.booking_id
-	LEFT JOIN service_images si ON b.service_id = si.service_id
+	LEFT JOIN Service_Images si ON b.service_id = si.service_id
 	WHERE b.user_id = ?
 	GROUP BY b.booking_id
 	ORDER BY b.created_at DESC
