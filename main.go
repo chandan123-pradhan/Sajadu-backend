@@ -19,11 +19,10 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	err := godotenv.Load("../.env") // explicitly load from root
-	if err != nil {
-    	log.Fatal("Error loading .env file")
+	err := godotenv.Load() 
+	if err != nil { 
+		log.Fatal("Error loading .env file") 
 	}
-
 	config.InitDB()
 
 	router := routes.InitializeRoutes()
