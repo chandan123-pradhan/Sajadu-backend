@@ -11,6 +11,7 @@ type RestorantBookingsResponse struct {
 	ServiceID     string           `json:"service_id"`
 	StartOtp 	  string 		   `json:"start_otp"`
 	ServiceName   string           `json:"service_name"`
+	ServiceDesc 	string 	`json:"service_description"`
 	Price         float64          `json:"price"`
 	Status        string           `json:"status"`
 	ScheduledDate string           `json:"scheduled_date"`

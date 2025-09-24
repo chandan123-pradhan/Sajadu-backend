@@ -5,7 +5,6 @@ import "time"
 // BookingRequest
 type BookingRequest struct {
 	UserID        string    `json:"user_id"`
-	RestaurantID  string    `json:"restaurant_id"`
 	ServiceID     string    `json:"service_id"`
 	ScheduledDate time.Time `json:"scheduled_date"`
 	ServiceName   string    `json:"service_name"`

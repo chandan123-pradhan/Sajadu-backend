@@ -7,7 +7,6 @@ import (
 	usermodels "decoration_project/models/user_models"
 	"decoration_project/utils"
 	"errors"
-	"fmt"
 )
 
 // GetAssignedBookings fetches all bookings assigned to a staff member
@@ -22,6 +21,7 @@ func GetAssignedBookings(staffID string) (staffmodel.AssignedBookingsWrapper, er
 			b.address,
 			b.service_name,
 			b.created_at,
+			b.price,
 
 			-- Payment details (may be NULL if no payment yet)
 			p.payment_id,
@@ -63,6 +63,7 @@ func GetAssignedBookings(staffID string) (staffmodel.AssignedBookingsWrapper, er
 			&booking.Address,
 			&booking.ServiceName,
 			&booking.CreatedAt,
+			&booking.Price,
 			&paymentID,
 			&amount,
 			&currency,
@@ -75,11 +76,7 @@ func GetAssignedBookings(staffID string) (staffmodel.AssignedBookingsWrapper, er
 			return staffmodel.AssignedBookingsWrapper{Bookings: []staffmodel.AssignedBookingsResponse{}}, err
 		}
 
-		// Map price from payment amount
-		if amount.Valid {
-			booking.Price = amount.Float64
-		}
-
+		
 		// Populate payment details if exists
 		if paymentID.Valid {
 			payment.PaymentID = paymentID.String
@@ -107,11 +104,12 @@ func GetAssignedBookings(staffID string) (staffmodel.AssignedBookingsWrapper, er
 }
 
 
-// GetAssignedServiceDetails fetches full details of a specific booking (without OTP & Staff)
-func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServicesDetails, error) {
+// GetBookingFullDetails fetches full booking details including payment, restaurant, and user info
+func GetBookingFullDetails(bookingID string) (staffmodel.StaffAssignedServicesDetails, error) {
 	query := `
 	SELECT 
 		b.booking_id,
+
 		u.user_id,
 		u.full_name,
 		u.email,
@@ -119,9 +117,7 @@ func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServic
 
 		b.service_id,
 		b.service_name,
-		rs.service_description,
-		COALESCE(rs.service_price, 0),
-		COALESCE(rs.items, JSON_ARRAY()),
+		b.price,
 
 		s.status_name,
 		b.scheduled_date,
@@ -143,7 +139,7 @@ func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServic
 	FROM bookings b
 	JOIN booking_status s ON b.status_id = s.status_id
 	JOIN users u ON b.user_id = u.user_id
-	JOIN Restaurant_Services rs ON b.service_id = rs.service_id
+	JOIN Restaurant_Profile r ON b.restaurant_id = r.restaurant_id
 	LEFT JOIN payments p ON b.booking_id = p.booking_id
 	WHERE b.booking_id = ?
 	`
@@ -155,8 +151,6 @@ func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServic
 	var payment usermodels.PaymentResponse
 
 	// Nullable fields
-	var serviceDesc sql.NullString
-	var items sql.NullString
 	var paymentID, transactionID, paymentMethod, currency, paymentStatus sql.NullString
 	var paymentDate sql.NullTime
 	var amount sql.NullFloat64
@@ -170,9 +164,7 @@ func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServic
 
 		&booking.ServiceID,
 		&booking.ServiceName,
-		&serviceDesc,
 		&booking.ServicePrice,
-		&items,
 
 		&booking.Status,
 		&booking.ScheduledDate,
@@ -196,18 +188,8 @@ func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServic
 		return staffmodel.StaffAssignedServicesDetails{}, err
 	}
 
-	// Assign user
+	// Assign user and restaurant info
 	booking.User = user
-
-	// Service description
-	if serviceDesc.Valid {
-		booking.ServiceDescription = serviceDesc.String
-	}
-
-	// Items (JSON stored as string)
-	if items.Valid {
-		booking.Items = items.String
-	}
 
 	// Assign payment if available
 	if paymentID.Valid {
@@ -244,61 +226,37 @@ func GetAssignedServiceDetails(bookingID string) (staffmodel.StaffAssignedServic
 }
 
 
-// VerifyToStartService verifies the staff OTP and updates booking status to "In Progress"
-// and generates the completion OTP for the user
-func VerifyToStartService(bookingID string, staffOTP string, key string) error {
-	// 1. Fetch encrypted OTP, current status, and start_verified
-	var encryptedOTP string
-	var statusID int
-	var startVerified bool
-	query := `SELECT start_otp_hash, status_id, start_verified FROM bookings WHERE booking_id = ?`
-	err := config.DB.QueryRow(query, bookingID).Scan(&encryptedOTP, &statusID, &startVerified)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("booking not found")
-		}
-		return err
-	}
+func StartService(bookingID, staffID, key string) error {
+    // Generate completion OTP
+    completeOTP := utils.GenerateOTP()
+    encryptedOTP, err := utils.EncryptOTP(completeOTP, key)
+    if err != nil {
+        return errors.New("failed to encrypt OTP")
+    }
 
-	// 2. Check if OTP is already verified or status is already "In Progress"
-	if startVerified || statusID == 4 {
-		return errors.New("service already started or OTP already verified")
-	}
+    // Update booking: status -> In Progress, mark start_verified, store complete OTP
+    updateQuery := `
+        UPDATE bookings
+        SET status_id = 4, start_verified = TRUE, complete_otp_hash = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE booking_id = ? AND staff_id = ?
+    `
+    result, err := config.DB.Exec(updateQuery, encryptedOTP, bookingID, staffID)
+    if err != nil {
+        return err
+    }
 
-	// 3. Decrypt OTP
-	decryptedOTP, err := utils.DecryptOTP(encryptedOTP, key)
-	if err != nil {
-		return errors.New("failed to decrypt OTP")
-	}
+    rowsAffected, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+    if rowsAffected == 0 {
+        return errors.New("booking not found or staff mismatch")
+    }
 
-	// 4. Compare OTP
-	if decryptedOTP != staffOTP {
-		return errors.New("invalid OTP")
-	}
-
-	// 5. Generate completion OTP for user
-	completeOTP := utils.GenerateOTP() // implement a 4-6 digit OTP generator
-	encryptedCompleteOTP, err := utils.EncryptOTP(completeOTP, key)
-	if err != nil {
-		return errors.New("failed to encrypt completion OTP")
-	}
-
-	// 6. Update status to "In Progress", mark start_verified, and save encrypted completion OTP
-	updateQuery := `
-		UPDATE bookings 
-		SET status_id = 4, start_verified = TRUE, complete_otp_hash = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE booking_id = ?
-	`
-	_, err = config.DB.Exec(updateQuery, encryptedCompleteOTP, bookingID)
-	if err != nil {
-		return err
-	}
-
-	// 7. Optionally, return or log the plain completion OTP so it can be sent to the user
-	fmt.Println("Completion OTP for booking", bookingID, "is", completeOTP)
-
-	return nil
+    return  nil
 }
+
+
 
 
 func SaveStaffLocation(staffID, bookingID string, latitude, longitude float64) error {

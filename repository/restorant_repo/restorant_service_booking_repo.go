@@ -24,8 +24,10 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			b.state,
 			b.city,
 			b.service_name,
+			b.price,
 			b.created_at,
 			b.start_otp_hash,  -- Encrypted OTP for staff verification
+			rs.service_description,  -- added service description
 
 			-- Payment details (may be NULL if no payment yet)
 			p.payment_id,
@@ -37,6 +39,7 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			COALESCE(p.payment_status, '')
 		FROM bookings b
 		JOIN booking_status s ON b.status_id = s.status_id
+		LEFT JOIN Our_Services rs ON b.service_id = rs.service_id  -- join to get service description
 		LEFT JOIN payments p ON b.booking_id = p.booking_id
 		WHERE b.restaurant_id = ?
 		ORDER BY b.created_at DESC
@@ -57,6 +60,7 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 		var paymentID, transactionID, paymentMethod, currency, paymentStatus, startOTP sql.NullString
 		var paymentDate sql.NullTime
 		var amount sql.NullFloat64
+		var serviceDesc sql.NullString
 
 		err := rows.Scan(
 			&booking.BookingID,
@@ -69,8 +73,10 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			&booking.State,
 			&booking.City,
 			&booking.ServiceName,
+			&booking.Price,
 			&booking.CreatedAt,
-			&startOTP,  // scan OTP as NullString
+			&startOTP,  
+			&serviceDesc,  // scan service description
 			&paymentID,
 			&amount,
 			&currency,
@@ -83,9 +89,11 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			return restorantmodels.RestaurantBookingsWrapper{Bookings: []restorantmodels.RestorantBookingsResponse{}}, err
 		}
 
-		// Map price from payment amount
-		if amount.Valid {
-			booking.Price = amount.Float64
+		// Assign service description
+		if serviceDesc.Valid {
+			booking.ServiceDesc = serviceDesc.String
+		} else {
+			booking.ServiceDesc = ""
 		}
 
 		// Populate payment details if exists
@@ -108,7 +116,6 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 		if startOTP.Valid && booking.Status != "Pending" && booking.Status != "Rejected" {
 			decryptedOtp, err := utils.DecryptOTP(startOTP.String, key)
 			if err != nil {
-				// If decryption fails, leave OTP blank but continue
 				booking.StartOtp = ""
 			} else {
 				booking.StartOtp = decryptedOtp
@@ -127,6 +134,7 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 	return restorantmodels.RestaurantBookingsWrapper{Bookings: bookings}, nil
 }
 
+
 // GetRestaurantBookingDetails fetches full details of a specific booking
 func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.BookingDetailsResponse, error) {
 	query := `
@@ -139,6 +147,9 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 
 		b.service_id,
 		b.service_name,
+		rs.service_description,   -- added service description
+		b.price,
+
 		s.status_name,
 		b.scheduled_date,
 		b.address,
@@ -150,13 +161,13 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 		b.created_at,
 		b.start_otp_hash,
 
-		rs.staff_id,
-		rs.name,
-		rs.whatsapp_no,
-		rs.designation,
-		rs.email,
-		rs.description,
-		rs.image_url,
+		staff.staff_id,
+		staff.name,
+		staff.whatsapp_no,
+		staff.designation,
+		staff.email,
+		staff.description,
+		staff.image_url,
 
 		p.payment_id,
 		COALESCE(p.amount,0),
@@ -168,7 +179,8 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 	FROM bookings b
 	JOIN booking_status s ON b.status_id = s.status_id
 	JOIN users u ON b.user_id = u.user_id
-	LEFT JOIN Restaurant_Staff rs ON rs.staff_id = b.staff_id
+	LEFT JOIN Our_Services rs ON b.service_id = rs.service_id   -- join to get service_description
+	LEFT JOIN Restaurant_Staff staff ON staff.staff_id = b.staff_id
 	LEFT JOIN payments p ON b.booking_id = p.booking_id
 	WHERE b.booking_id = ?
 	`
@@ -183,6 +195,7 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 	// Nullable fields
 	var startOTP sql.NullString
 	var staffID, staffName, staffWhatsapp, staffDesignation, staffEmail, staffDescription, staffImage sql.NullString
+	var serviceDescription sql.NullString
 	var paymentID, transactionID, paymentMethod, currency, paymentStatus sql.NullString
 	var paymentDate sql.NullTime
 	var amount sql.NullFloat64
@@ -196,6 +209,9 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 
 		&booking.ServiceID,
 		&booking.ServiceName,
+		&serviceDescription,   // scanned service_description
+		&booking.Price,
+
 		&booking.Status,
 		&booking.ScheduledDate,
 		&booking.Address,
@@ -230,6 +246,11 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 	// Assign user
 	booking.User = user
 
+	// Assign service description
+	if serviceDescription.Valid {
+		booking.ServiceDesc = serviceDescription.String
+	}
+
 	// Assign staff if available
 	if staffID.Valid {
 		staff.StaffID = staffID.String
@@ -259,6 +280,7 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 	} else {
 		booking.Payment = nil
 	}
+
 	// Decrypt Start OTP if available
 	if startOTP.Valid && booking.Status != "Pending" && booking.Status != "Rejected" {
 		decryptedOtp, err := utils.DecryptOTP(startOTP.String, key)
@@ -273,7 +295,6 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 
 	return booking, nil
 }
-
 
 
 // AcceptBooking generates staff OTP and updates booking status to Accepted

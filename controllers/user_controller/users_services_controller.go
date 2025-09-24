@@ -94,14 +94,13 @@ func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate required fields
-	if usermodels.GetServiceDetailsRequest.RestaurantId == "" || usermodels.GetServiceDetailsRequest.ServiceId == "" {
+	if usermodels.GetServiceDetailsRequest.ServiceId == "" {
 		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Restaurant ID and Service ID are required")
 		return
 	}
 
 	// Call service layer
 	serviceWithRest, err := userservices.GetServiceDetails(
-		usermodels.GetServiceDetailsRequest.RestaurantId,
 		usermodels.GetServiceDetailsRequest.ServiceId,
 	)
 	if err != nil {
@@ -118,6 +117,5 @@ func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 	// Success response
 	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
 		"service":    serviceWithRest.Service,
-		"restaurant": serviceWithRest.Restaurant,
 	}, "Service details fetched successfully")
 }

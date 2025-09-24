@@ -25,9 +25,6 @@ func ValidateImageSize(file multipart.File, maxSize int64) error {
 }
 
 func ValidateBookingRequest(req usermodels.BookingRequest) error {
-	if req.RestaurantID == "" {
-		return fmt.Errorf("Restaurant ID is required")
-	}
 	if req.ServiceID == "" {
 		return fmt.Errorf("Service ID is required")
 	}
