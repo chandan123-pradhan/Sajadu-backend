@@ -45,13 +45,12 @@ func CreateBooking(req usermodels.BookingRequest) (usermodels.BookingResponse, e
 	// Insert booking
 	bookingQuery := `
 		INSERT INTO bookings 
-		(booking_id, user_id, restaurant_id, service_id, status_id, scheduled_date, address, latitude, longitude, pincode, state, city, service_name) 
+		(booking_id, user_id, service_id, status_id, scheduled_date, address, latitude, longitude, pincode, state, city, service_name, price) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err = tx.Exec(bookingQuery,
 		bookingID,
 		req.UserID,
-		req.RestaurantID,
 		req.ServiceID,
 		statusID,
 		formattedDate,
@@ -62,6 +61,7 @@ func CreateBooking(req usermodels.BookingRequest) (usermodels.BookingResponse, e
 		req.State,
 		req.City,
 		req.ServiceName,
+		req.Price,
 	)
 	if err != nil {
 		return usermodels.BookingResponse{}, err
@@ -95,7 +95,6 @@ func CreateBooking(req usermodels.BookingRequest) (usermodels.BookingResponse, e
 	res := usermodels.BookingResponse{
 		BookingID:     bookingID,
 		UserID:        req.UserID,
-		RestaurantID:  req.RestaurantID,
 		ServiceID:     req.ServiceID,
 		Status:        "Pending", // mapped from status_id
 		ScheduledDate: formattedDate,
@@ -143,6 +142,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 		b.created_at,
 		b.start_verified,
 		b.complete_otp_hash,
+		b.price,
 
 		-- Payment details (may be NULL if no payment yet)
 		MAX(p.payment_id),
@@ -180,11 +180,11 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 		var amount sql.NullFloat64
 		var startVerified bool
 		var serviceImages sql.NullString
-
+        var restaurantID sql.NullString
 		err := rows.Scan(
 			&booking.BookingID,
 			&booking.UserID,
-			&booking.RestaurantID,
+			&restaurantID,
 			&booking.ServiceID,
 			&booking.Status,
 			&booking.ScheduledDate,
@@ -196,6 +196,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 			&booking.CreatedAt,
 			&startVerified,
 			&completeOtpHash,
+			&booking.Price,
 			&paymentID,
 			&amount,
 			&currency,
@@ -209,11 +210,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 			return usermodels.UserBookingsWrapper{Bookings: []usermodels.BookingResponse{}}, err
 		}
 
-		// Map price from payment amount
-		if amount.Valid {
-			booking.Price = amount.Float64
-		}
-
+		
 		// If payment exists, populate PaymentResponse
 		if paymentID.Valid {
 			payment.PaymentID = paymentID.String
@@ -274,7 +271,6 @@ func GetBookingDetails(bookingID string) (usermodels.GetUsersBookingDetailsRespo
 		b.service_name,
 		rs.service_description,
 		COALESCE(rs.service_price, 0),
-		COALESCE(rs.items, JSON_ARRAY()),
 
 		s.status_name,
 		b.scheduled_date,
@@ -296,7 +292,7 @@ func GetBookingDetails(bookingID string) (usermodels.GetUsersBookingDetailsRespo
 	FROM bookings b
 	JOIN booking_status s ON b.status_id = s.status_id
 	LEFT JOIN Restaurant_Staff u ON b.staff_id = u.staff_id
-	LEFT JOIN Restaurant_Services rs ON b.service_id = rs.service_id
+	LEFT JOIN Our_Services rs ON b.service_id = rs.service_id
 	LEFT JOIN payments p ON b.booking_id = p.booking_id
 	WHERE b.booking_id = ?
 	`
@@ -308,7 +304,6 @@ func GetBookingDetails(bookingID string) (usermodels.GetUsersBookingDetailsRespo
 
 	// Nullable fields
 	var serviceDesc sql.NullString
-	var items sql.NullString
 	var paymentID, transactionID, paymentMethod, currency, paymentStatus sql.NullString
 	var paymentDate sql.NullTime
 	var amount sql.NullFloat64
@@ -328,7 +323,6 @@ func GetBookingDetails(bookingID string) (usermodels.GetUsersBookingDetailsRespo
 		&booking.ServiceName,
 		&serviceDesc,
 		&booking.ServicePrice,
-		&items,
 
 		&booking.Status,
 		&booking.ScheduledDate,
@@ -370,11 +364,7 @@ if staffID.Valid {
 		booking.ServiceDescription = serviceDesc.String
 	}
 
-	// Items (JSON stored as string)
-	if items.Valid {
-		booking.Items = items.String
-	}
-
+	
 	// Assign payment if available
 	if paymentID.Valid {
 		payment.PaymentID = paymentID.String

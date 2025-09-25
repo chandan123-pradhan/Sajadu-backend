@@ -2,6 +2,7 @@ package staffcontrollers
 
 import (
 	staffmodel "decoration_project/models/staff_model"
+	
 	staffservices "decoration_project/services/staff_services"
 	"decoration_project/utils"
 	"encoding/json"
@@ -58,9 +59,9 @@ func GetAssignedServicesDetails(w http.ResponseWriter, r *http.Request) {
 	utils.SendResponse(w, http.StatusOK, true, booking, "Booking details fetched successfully")
 }
 
-func VerifyStaffOTP(w http.ResponseWriter, r *http.Request) {
+func StartService(w http.ResponseWriter, r *http.Request) {
 	// Validate staff token
-	_, err := utils.ValidateStaffToken(r)
+	staffId, err := utils.ValidateStaffToken(r)
 	if err != nil {
 		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized: "+err.Error())
 		return
@@ -73,26 +74,26 @@ func VerifyStaffOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.BookingID == "" || req.OTP == "" {
-		utils.SendResponse(w, http.StatusBadRequest, false, nil, "BookingID and OTP are required")
+	if req.BookingID == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "BookingID is required")
 		return
 	}
-
-	// Read OTP encryption key from environment
+// Read OTP encryption key from environment
 	key := os.Getenv("OTP_ENCRYPTION_KEY")
+	fmt.Println("OTP_ENCRYPTION_KEY:", key, "Length:", len(key))
 	if len(key) != 32 {
 		utils.SendResponse(w, http.StatusInternalServerError, false, nil, "Invalid OTP encryption key configuration")
 		return
 	}
-
+	
 	// Call service layer to verify OTP
-	err = staffservices.VerifyOtpToStartService(req.BookingID, req.OTP, key)
+	err = staffservices.StartService(req.BookingID, staffId, key)
 	if err != nil {
-		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "OTP verification failed: "+err.Error())
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Error"+err.Error())
 		return
 	}
 	// Success response
-	utils.SendResponse(w, http.StatusOK, true, nil, "OTP verified successfully, booking status updated to In Progress")
+	utils.SendResponse(w, http.StatusOK, true, nil, "Service has been started successfully, booking status updated to In Progress")
 }
 
 
@@ -128,34 +129,6 @@ func UpdateStaffLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 
-
-
-func GetPartnerLiveLocation(w http.ResponseWriter, r *http.Request) {
-
-	_, err := utils.ValidateStaffToken(r)
-	if err != nil {
-		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized: "+err.Error())
-		return
-	}
-
-	// ✅ Get booking_id from URL params
-	vars := mux.Vars(r)
-	bookingID := vars["id"]
-	if bookingID == "" {
-		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "booking_id is required")
-		return
-	}
-
-	// ✅ Call service layer
-	location, err := staffservices.GetPartnerLocationByBookingID(bookingID)
-	if err != nil {
-		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to fetch live location: "+err.Error())
-		return
-	}
-
-	// ✅ Success response
-	utils.SendResponse(w, http.StatusOK, true, location, "Live location fetched successfully")
-}
 
 
 

@@ -3,7 +3,9 @@ package usercontroller
 import (
 	usermodels "decoration_project/models/user_models"
 	"fmt"
+
 	// staffservices "decoration_project/services/staff_services"
+	staffservices "decoration_project/services/staff_services"
 	userservices "decoration_project/services/user_services"
 	"decoration_project/utils"
 	"encoding/json"
@@ -110,5 +112,35 @@ func GetBookingDetails(w http.ResponseWriter, r *http.Request) {
 	
 
 }
+
+
+
+func GetPartnerLiveLocation(w http.ResponseWriter, r *http.Request) {
+
+	_, err := utils.ValidateToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized: "+err.Error())
+		return
+	}
+
+	// ✅ Get booking_id from URL params
+	vars := mux.Vars(r)
+	bookingID := vars["id"]
+	if bookingID == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "booking_id is required")
+		return
+	}
+
+	// ✅ Call service layer
+	location, err := staffservices.GetPartnerLocationByBookingID(bookingID)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to fetch live location: "+err.Error())
+		return
+	}
+
+	// ✅ Success response
+	utils.SendResponse(w, http.StatusOK, true, location, "Live location fetched successfully")
+}
+
 
 

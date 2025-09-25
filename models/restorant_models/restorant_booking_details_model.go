@@ -12,6 +12,7 @@ type BookingDetailsResponse struct {
 	Staff         *StaffDetails               `json:"staff,omitempty"`   // nil if not assigned
 	ServiceID     string                      `json:"service_id"`
 	ServiceName   string                      `json:"service_name"`
+	ServiceDesc   string                      `json:"service_description"`
 	Price         float64                     `json:"price"`
 	Status        string                      `json:"status"`
 	ScheduledDate string                      `json:"scheduled_date"`

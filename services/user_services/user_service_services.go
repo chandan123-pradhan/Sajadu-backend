@@ -10,7 +10,7 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 	return userrepo.GetServicesByCategory(categoryID)
 }
 
-func GetServiceDetails(restaurantID, serviceID string) (restorantmodels.ServiceWithRestaurant, error) {
+func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant, error) {
 	// Call repository
-	return userrepo.GetServiceDetails(restaurantID, serviceID)
+	return userrepo.GetServiceDetails(serviceID)
 }

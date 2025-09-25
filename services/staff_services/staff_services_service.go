@@ -15,14 +15,14 @@ func GetAssignedServices(restorantId string) (staffmodel.AssignedBookingsWrapper
 
 func GetAssignedServiesDetails(bookingId string) (staffmodel.StaffAssignedServicesDetails, error) {
 	// Call repository to fetch bookings
-	return staffrepo.GetAssignedServiceDetails(bookingId)
+	return staffrepo.GetBookingFullDetails(bookingId)
 }
 
 
-func VerifyOtpToStartService(bookingId string, stafOtp string, key string) error {
+func StartService(bookingId string, staffId string, key string) error {
 	// Call repository to fetch bookings
-	return staffrepo.VerifyToStartService(
-		bookingId,stafOtp,key,)
+	return staffrepo.StartService(
+		bookingId, staffId,key)
 }
 
 func UpdateStaffLocation(staffID, bookingID string, latitude, longitude float64) error {
