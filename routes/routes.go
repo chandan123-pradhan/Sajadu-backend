@@ -9,9 +9,10 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
-func InitializeRoutes() *mux.Router {
+func InitializeRoutes() http.Handler {
 	router := mux.NewRouter()
 
 	// Admin Apis.
@@ -62,5 +63,12 @@ func InitializeRoutes() *mux.Router {
 
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
-	return router
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Or restrict to frontend origin
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	return c.Handler(router)
 }
