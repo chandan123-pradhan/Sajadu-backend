@@ -178,7 +178,7 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 		COALESCE(p.payment_status,'')
 	FROM bookings b
 	JOIN booking_status s ON b.status_id = s.status_id
-	JOIN users u ON b.user_id = u.user_id
+	JOIN Users u ON b.user_id = u.user_id
 	LEFT JOIN Our_Services rs ON b.service_id = rs.service_id   -- join to get service_description
 	LEFT JOIN Restaurant_Staff staff ON staff.staff_id = b.staff_id
 	LEFT JOIN payments p ON b.booking_id = p.booking_id
