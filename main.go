@@ -33,7 +33,7 @@ func main() {
 		AllowedOrigins:   []string{"https://sajadu-c8c98.web.app"}, // your Flutter web URL
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}).Handler(router)
 
 	// ✅ Add logging after CORS
