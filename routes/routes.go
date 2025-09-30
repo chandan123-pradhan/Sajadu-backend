@@ -64,11 +64,15 @@ func InitializeRoutes() http.Handler {
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 c := cors.New(cors.Options{
-    AllowedOrigins: []string{"https://sajadu-c8c98.web.app"},
-    AllowedMethods: []string{"GET", "POST", "OPTIONS"},
-    AllowedHeaders: []string{"Content-Type", "Authorization"},
-    AllowCredentials: false, // NO cookies
+    AllowedOrigins: []string{
+        "https://sajadu-c8c98.web.app",
+    },
+    AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+    AllowedHeaders: []string{"*"},
+    AllowCredentials: false, // we don’t need cookies
+    Debug: true, // log CORS decisions
 })
+
 return c.Handler(router)
 
 	
