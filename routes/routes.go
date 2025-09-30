@@ -64,11 +64,11 @@ func InitializeRoutes() http.Handler {
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	c := cors.New(cors.Options{
-    AllowedOrigins:   []string{"*"}, // exact Firebase URL
+    AllowedOrigins:   []string{"https://sajadu.com"},
     AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
     AllowedHeaders:   []string{"Content-Type", "Authorization"},
     AllowCredentials: true,
-   })
+})
 
 	return c.Handler(router)
 }
