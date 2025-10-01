@@ -30,7 +30,7 @@ func main() {
 
 	// ✅ Wrap router with CORS
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"https://sajadu-c8c98.web.app"}, // your Flutter web URL
+		AllowedOrigins:   []string{"https://sajadu-c8c98.web.app", "*"}, // your Flutter web URL
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: false,
