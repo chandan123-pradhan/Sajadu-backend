@@ -119,3 +119,43 @@ func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 		"service":    serviceWithRest.Service,
 	}, "Service details fetched successfully")
 }
+
+
+func SearchServices(w http.ResponseWriter, r *http.Request) {
+	// Validate JWT token
+	_, err := utils.ValidateToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized: "+err.Error())
+		return
+	}
+
+	// Decode request body
+	err = json.NewDecoder(r.Body).Decode(&usermodels.SearchServicesRequest)
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body")
+		return
+	}
+
+	// Validate input
+	if usermodels.SearchServicesRequest.Query == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Search query is required")
+		return
+	}
+
+	// Call service layer
+	services, err := userservices.SearchServices(usermodels.SearchServicesRequest.Query)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to search services: "+err.Error())
+		return
+	}
+
+	// Ensure not nil
+	if services == nil {
+		services = []restorantmodels.RestaurantService{}
+	}
+
+	// Success response
+	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
+		"services": services,
+	}, "Search results fetched successfully")
+}

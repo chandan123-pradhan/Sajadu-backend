@@ -14,3 +14,7 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 	// Call repository
 	return userrepo.GetServiceDetails(serviceID)
 }
+
+func SearchServices(query string) ([]restorantmodels.RestaurantService, error) {
+    return userrepo.SearchServicesByName(query)
+}

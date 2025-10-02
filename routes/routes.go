@@ -36,6 +36,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/users/get-service-details", usercontroller.GetServiceDetails).Methods("POST")
 	router.HandleFunc("/users/get-bookings/{id}", usercontroller.GetBookingDetails).Methods("GET")
 	router.HandleFunc("/users/booking/{id}/location", usercontroller.GetPartnerLiveLocation).Methods("GET")
+	router.HandleFunc("/users/search-service", usercontroller.SearchServices).Methods("POST")	
 
 	
 	// Restorant APIS.

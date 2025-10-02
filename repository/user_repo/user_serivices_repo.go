@@ -3,6 +3,7 @@ package userrepo
 import (
 	"decoration_project/config"
 	restorantmodels "decoration_project/models/restorant_models"
+	"fmt"
 )
 
 func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantService, error) {
@@ -109,4 +110,63 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 	result.Service.Images = images
 
 	return result, nil
+}
+
+
+
+func SearchServicesByName(search string) ([]restorantmodels.RestaurantService, error) {
+	query := `
+		SELECT 
+			service_id, category_id, service_name, service_description, 
+			service_price, created_at, updated_at
+		FROM Our_Services
+		WHERE service_name LIKE ?
+	`
+
+	// %search% pattern for LIKE query
+	rows, err := config.DB.Query(query, "%"+search+"%")
+	if err != nil {
+		return nil, fmt.Errorf("failed to search services: %w", err)
+	}
+	defer rows.Close()
+
+	var services []restorantmodels.RestaurantService
+
+	for rows.Next() {
+		var service restorantmodels.RestaurantService
+
+		if err := rows.Scan(
+			&service.ServiceID,
+			&service.CategoryId,
+			&service.ServiceName,
+			&service.ServiceDescription,
+			&service.ServicePrice,
+			&service.CreatedAt,
+			&service.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		// Fetch images for this service
+		imageRows, err := config.DB.Query("SELECT image_url FROM Service_Images WHERE service_id = ?", service.ServiceID)
+		if err != nil {
+			return nil, err
+		}
+
+		var images []string
+		for imageRows.Next() {
+			var img string
+			if err := imageRows.Scan(&img); err != nil {
+				imageRows.Close()
+				return nil, err
+			}
+			images = append(images, img)
+		}
+		imageRows.Close()
+		service.Images = images
+
+		services = append(services, service)
+	}
+
+	return services, nil
 }
