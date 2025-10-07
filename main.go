@@ -3,6 +3,7 @@ package main
 import (
 	"decoration_project/config"
 	"decoration_project/routes"
+	"decoration_project/services"
 	"log"
 	"net/http"
 	"os"
@@ -27,6 +28,7 @@ func main() {
 	config.InitDB()
 
 	router := routes.InitializeRoutes()
+	services.InitFirebase()
 
 	// ✅ Wrap router with CORS
 	corsHandler := cors.New(cors.Options{

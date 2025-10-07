@@ -2,6 +2,7 @@ package usercontroller
 
 import (
 	usermodels "decoration_project/models/user_models"
+	userrepo "decoration_project/repository/user_repo"
 	"fmt"
 
 	// staffservices "decoration_project/services/staff_services"
@@ -50,6 +51,7 @@ func CreateBooking(w http.ResponseWriter, r *http.Request) {
 
 	// Success
 	utils.SendResponse(w, http.StatusOK, true, bookingRes, "Booking created successfully")
+	userrepo.SendBookingNotificationToAdmin(userId)
 }
 
 

@@ -25,7 +25,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/admin/get-active-bookings", admincontroller.GetAllBookings).Methods("POST")
 	router.HandleFunc("/admin/booking-details", admincontroller.GetBookingsDetails).Methods("GET")
 	router.HandleFunc("/admin/update-status",admincontroller.UpdateBookingStatus).Methods("POST");
-
+	router.HandleFunc("/admin/update-fcm",admincontroller.SetAdminFCMToken).Methods("POST");
 	//User apis.
 	router.HandleFunc("/users/create_account", usercontroller.RegisterUserHandler).Methods("POST")
 	router.HandleFunc("/users/login", usercontroller.LoginUserHandler).Methods("POST")
