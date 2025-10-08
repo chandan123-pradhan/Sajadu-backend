@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 func GetRestorants(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +131,7 @@ func UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
 	err = notificationservices.SendBookingNotificationToRestorant(
 		req.RestaurantID,
 		summary.ServiceName,
+		strconv.FormatFloat(summary.Price, 'f', 2, 64),
 		req.NewStatus,
 	)
 	if err != nil {
