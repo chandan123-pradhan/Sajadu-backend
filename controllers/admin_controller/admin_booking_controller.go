@@ -126,5 +126,15 @@ func UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
 		// Notification failure should not block the main response
 		fmt.Println("Failed to send booking notification:", err)
 	}
+	// Send notification to user
+	err = notificationservices.SendBookingNotificationToRestorant(
+		req.RestaurantID,
+		summary.ServiceName,
+		req.NewStatus,
+	)
+	if err != nil {
+		// Notification failure should not block the main response
+		fmt.Println("Failed to send booking notification:", err)
+	}
 
 }

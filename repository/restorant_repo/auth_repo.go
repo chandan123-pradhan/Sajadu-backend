@@ -114,3 +114,22 @@ func GetRestaurantWithImages(email string) (restorantmodels.RestaurantProfile, [
 
     return restaurant, images, hashedPassword, nil
 }
+
+
+func UpdateFcmToken(restorantId, fcmToken string) error {
+	query := "UPDATE Restaurant_Profile SET fcm_token = ? WHERE restaurant_id = ?"
+	_, err := config.DB.Exec(query, fcmToken, restorantId)
+	return err
+}
+
+func GetRestorantFcmToken(restorantId string) (string, error) {
+	query := "SELECT fcm_token FROM Restaurant_Profile WHERE restaurant_id = ?"
+	row := config.DB.QueryRow(query, restorantId)
+
+	var fcmToken string
+	err := row.Scan(&fcmToken)
+	if err != nil {
+		return "", err
+	}
+	return fcmToken, nil
+}

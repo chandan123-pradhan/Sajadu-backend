@@ -65,3 +65,24 @@ func LoginRestaurant(email, password string) (map[string]interface{}, error) {
 
 	return response, nil
 }
+
+
+
+func UpdateFcmToken(restorantId, fcmToken string) error {
+    // Ensure userID and fcmToken are valid
+    if restorantId == "" || fcmToken == "" {
+        return errors.New("invalid Restorant ID or FCM token")
+    }
+
+    // Call repository layer
+    err := restorantrepo.UpdateFcmToken(restorantId, fcmToken)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func GetRestorantFcmTokenService(restorantId string) (string, error) {
+	return restorantrepo.GetRestorantFcmToken(restorantId)
+}

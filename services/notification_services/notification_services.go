@@ -2,6 +2,7 @@ package notificationservices
 
 import (
 	adminrepo "decoration_project/repository/admin_repo"
+	restorantrepo "decoration_project/repository/restorant_repo"
 	userrepo "decoration_project/repository/user_repo"
 	"decoration_project/services"
 	"log"
@@ -59,6 +60,37 @@ func SendBookingNotificationToUser(userId string, item string, reson string) err
 
 	// Send notification
 	if err := services.SendNotification(adminToken, title, body); err != nil {
+		log.Println("Failed to send notification:", err)
+		return err
+	}
+
+	log.Println("✅ Notification sent to user successfully")
+	return nil
+}
+
+
+
+// SendBookingNotificationToAdmin sends a notification to the admin when a new booking is created
+func SendBookingNotificationToRestorant(restorantId string, item string,price string, reson string) error {
+	// Fetch the admin FCM token
+	fcmToken, err := restorantrepo.GetRestorantFcmToken(restorantId)
+	if err != nil {
+		log.Println("Failed to fetch restorant FCM token:", err)
+		return err
+	}
+
+	if fcmToken == "" {
+		log.Println("No restorant FCM token found")
+		return nil
+	}
+	
+ 
+	// Prepare notification
+	title := "New Booking"
+	body := "Hey, You Got another booking "+item+" at ₹ +"+price+" by Sajadu, Please check your bookings page."
+
+	// Send notification
+	if err := services.SendNotification(fcmToken, title, body); err != nil {
 		log.Println("Failed to send notification:", err)
 		return err
 	}

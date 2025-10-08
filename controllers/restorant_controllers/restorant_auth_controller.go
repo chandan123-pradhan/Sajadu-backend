@@ -134,3 +134,43 @@ func LoginRestaurant(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendResponse(w, http.StatusOK, true, responseData, "Login successful")
 }
+
+
+
+// ======================= UPDATE FCM TOKEN =======================
+func UpdateFcmTokenHandler(w http.ResponseWriter, r *http.Request) {
+    // Validate token and extract user ID
+    userID, err := utils.ValidateRestaurantToken(r)
+    if err != nil {
+        utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized or invalid token")
+        return
+    }
+
+    // Parse request body
+    var req struct {
+        FcmToken string `json:"fcm_token"`
+    }
+    err = json.NewDecoder(r.Body).Decode(&req)
+    if err != nil {
+        utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body")
+        return
+    }
+
+    // Validate input
+    if req.FcmToken == "" {
+        utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "FCM token is required")
+        return
+    }
+
+    // Update FCM token in DB
+    err = restorantservices.UpdateFcmToken(userID, req.FcmToken)
+    if err != nil {
+        utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to update FCM token")
+        return
+    }
+
+    utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
+        "restorant_id":   userID,
+        "fcm_token": req.FcmToken,
+    }, "FCM token updated successfully")
+}

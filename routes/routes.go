@@ -54,6 +54,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/restorant/update-booking", restorantcontrollers.HandleBookingAction).Methods("POST")
 	router.HandleFunc("/restorant/assign-staff-booking", restorantcontrollers.AssignStaffToBooking).Methods("POST")
 	router.HandleFunc("/restorant/booking-details/{id}", restorantcontrollers.GetBookingDetails).Methods("GET")
+	router.HandleFunc("/restorant/update-fcm", restorantcontrollers.UpdateFcmTokenHandler).Methods("POST")
 
 	// Staff Apis.
 	router.HandleFunc("/staff/login", staffcontrollers.LoginStaffHandler).Methods("POST")
