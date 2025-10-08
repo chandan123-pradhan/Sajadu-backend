@@ -71,3 +71,19 @@ func UpdateFcmToken(userID, fcmToken string) error {
 func GetUserFcmTokenService(userID string) (string, error) {
 	return userrepo.GetUserFcmToken(userID)
 }
+
+
+func CancelBookingByUserService(userID, bookingID, reason string) error {
+	// Validate input
+	if userID == "" || bookingID == "" {
+		return errors.New("userID and bookingID are required")
+	}
+
+	// Call repository function
+	err := userrepo.CancelBookingByUser(bookingID, userID, reason)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

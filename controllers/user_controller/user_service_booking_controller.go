@@ -146,3 +146,51 @@ func GetPartnerLiveLocation(w http.ResponseWriter, r *http.Request) {
 
 
 
+
+
+func CancelBooking(w http.ResponseWriter, r *http.Request) {
+	// Validate JWT token and get userId
+	userID, err := utils.ValidateToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized: "+err.Error())
+		return
+	}
+
+	// Parse request body
+	var req struct {
+		BookingID string `json:"booking_id"`
+		Reason    string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.BookingID == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "booking_id is required")
+		return
+	}
+
+	// Call service layer to cancel booking
+	err = userservices.CancelBookingByUserService(userID, req.BookingID, req.Reason)
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "Failed to cancel booking: "+err.Error())
+		return
+	}
+
+	// // Fetch service summary after update
+	// summary, err := adminserices.GetBookingServiceSummary(req.BookingID)
+	// if err != nil {
+	// 	utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Booking updated but failed to fetch summary")
+	// 	return
+	// }
+
+	// // Send cancellation notification to admin or partner
+	// notificationservices.SendBookingNotificationToAdmin(summary.UserID, "Cancelled by User")
+
+	// Success response
+	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
+		"booking_id": req.BookingID,
+		"status":     "Cancelled",
+	}, "Booking cancelled successfully")
+}

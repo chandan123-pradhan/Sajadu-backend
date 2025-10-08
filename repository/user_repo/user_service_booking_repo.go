@@ -398,3 +398,59 @@ if staffID.Valid {
 
 	return booking, nil
 }
+
+
+
+func CancelBookingByUser(bookingID, userID, reason string) error {
+    tx, err := config.DB.Begin()
+    if err != nil {
+        return err
+    }
+    defer func() {
+        if err != nil {
+            _ = tx.Rollback()
+        } else {
+            _ = tx.Commit()
+        }
+    }()
+
+    // Fetch current booking status and user_id
+    var currentStatusID int
+    var bookingUserID string
+    err = tx.QueryRow(`SELECT status_id, user_id FROM bookings WHERE booking_id = ?`, bookingID).Scan(&currentStatusID, &bookingUserID)
+    if err != nil {
+        return fmt.Errorf("booking not found")
+    }
+
+    if bookingUserID != userID {
+        return fmt.Errorf("unauthorized action")
+    }
+
+    if currentStatusID > 2 { // Only Pending(1) or Accepted(2) allowed
+        return fmt.Errorf("cannot cancel this booking, already in-progress or completed")
+    }
+
+    // Set status_id for Cancelled
+    cancelledStatusID := 6
+
+    // Update booking
+    _, err = tx.Exec(`
+        UPDATE bookings 
+        SET status_id = ?, cancelled_by = 'User', cancel_reason = ?, updated_at = NOW()
+        WHERE booking_id = ?
+    `, cancelledStatusID, reason, bookingID)
+    if err != nil {
+        return err
+    }
+
+    // Insert booking log
+    _, err = tx.Exec(`
+        INSERT INTO booking_logs (log_id, booking_id, old_status, new_status, changed_by, created_at)
+        VALUES (UUID(), ?, ?, ?, 'User', NOW())
+    `, bookingID, currentStatusID, cancelledStatusID)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
