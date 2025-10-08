@@ -51,3 +51,23 @@ func LoginUser(email, password string) (map[string]interface{}, error) {
 
     return resp, nil
 }
+
+
+func UpdateFcmToken(userID, fcmToken string) error {
+    // Ensure userID and fcmToken are valid
+    if userID == "" || fcmToken == "" {
+        return errors.New("invalid user ID or FCM token")
+    }
+
+    // Call repository layer
+    err := userrepo.UpdateFcmToken(userID, fcmToken)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func GetUserFcmTokenService(userID string) (string, error) {
+	return userrepo.GetUserFcmToken(userID)
+}

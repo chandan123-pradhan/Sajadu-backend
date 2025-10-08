@@ -3,12 +3,12 @@ package admincontroller
 import (
 	adminmodel "decoration_project/models/admin_model"
 	adminserices "decoration_project/services/admin_serices"
+	notificationservices "decoration_project/services/notification_services"
 	"decoration_project/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
 )
-
 
 func GetRestorants(w http.ResponseWriter, r *http.Request) {
 	restorants, err := adminserices.GetAllRestorant()
@@ -32,46 +32,40 @@ func GetRestorants(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAllBookings(w http.ResponseWriter, r *http.Request) {
-    type RequestBody struct {
-        Status []string `json:"status"` // e.g., ["Accepted", "Pending"]
-    }
+	type RequestBody struct {
+		Status []string `json:"status"` // e.g., ["Accepted", "Pending"]
+	}
 
-    var reqBody RequestBody
-    if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-        utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{
-            "bookings": []interface{}{},
-        }, "Invalid request body")
-        return
-    }
+	var reqBody RequestBody
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{
+			"bookings": []interface{}{},
+		}, "Invalid request body")
+		return
+	}
 
-    bookings, err := adminserices.GetAllActiveBookings(reqBody.Status)
-    if err != nil {
-        fmt.Print(err)
-        utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{
-            "bookings": []interface{}{},
-        }, "Failed to fetch bookings")
-        return
-    }
+	bookings, err := adminserices.GetAllActiveBookings(reqBody.Status)
+	if err != nil {
+		fmt.Print(err)
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{
+			"bookings": []interface{}{},
+		}, "Failed to fetch bookings")
+		return
+	}
 
-    if bookings == nil {
-        bookings = []adminmodel.BookingResponse{}
-    }
+	if bookings == nil {
+		bookings = []adminmodel.BookingResponse{}
+	}
 
-    data := map[string]interface{}{
-        "bookings": bookings,
-    }
+	data := map[string]interface{}{
+		"bookings": bookings,
+	}
 
-    utils.SendResponse(w, http.StatusOK, true, data, "Bookings fetched successfully")
+	utils.SendResponse(w, http.StatusOK, true, data, "Bookings fetched successfully")
 }
-
-
-
-
-
 
 // ======================= GET SERVICE DETAILS =======================
 func GetBookingsDetails(w http.ResponseWriter, r *http.Request) {
-	
 
 	// Get serviceID from query parameter
 	bookingid := r.URL.Query().Get("booking_id")
@@ -87,10 +81,8 @@ func GetBookingsDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	utils.SendResponse(w, http.StatusOK, true, bookingDetails, "booking details fetched successfully")
 }
-
 
 func UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
 	var req adminmodel.UpdateBookingStatusRequest
@@ -116,6 +108,23 @@ func UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{}, "Booking status updated successfully")
+
+	// Fetch service summary after update
+	summary, err := adminserices.GetBookingServiceSummary(req.BookingID)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Booking updated but failed to fetch summary")
+		return
+	}
+
+	// Send notification to user
+	err = notificationservices.SendBookingNotificationToUser(
+		summary.UserID,
+		summary.ServiceName,
+		req.NewStatus,
+	)
+	if err != nil {
+		// Notification failure should not block the main response
+		fmt.Println("Failed to send booking notification:", err)
+	}
+
 }
-
-

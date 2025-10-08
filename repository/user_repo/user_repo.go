@@ -28,3 +28,22 @@ func GetUserByEmail(email string) (usermodels.User, error) {
     }
     return user, nil
 }
+
+
+func UpdateFcmToken(userID, fcmToken string) error {
+	query := "UPDATE Users SET fcm_token = ? WHERE user_id = ?"
+	_, err := config.DB.Exec(query, fcmToken, userID)
+	return err
+}
+
+func GetUserFcmToken(userID string) (string, error) {
+	query := "SELECT fcm_token FROM Users WHERE user_id = ?"
+	row := config.DB.QueryRow(query, userID)
+
+	var fcmToken string
+	err := row.Scan(&fcmToken)
+	if err != nil {
+		return "", err
+	}
+	return fcmToken, nil
+}

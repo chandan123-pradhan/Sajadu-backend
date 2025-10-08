@@ -419,3 +419,53 @@ func UpdateBookingStatus(bookingID, restaurantID, newStatus string) error {
 
 	return nil
 }
+
+func GetBookingServiceSummary(bookingID string) (imageURL, serviceName, userID string, price float64, err error) {
+	// Fetch service ID, user ID, service name, price
+	query := `
+	SELECT b.user_id, b.service_name, b.service_id, b.price
+	FROM bookings b
+	WHERE b.booking_id = ?
+	LIMIT 1
+	`
+	var serviceID sql.NullString
+	var userIDNull sql.NullString
+	var serviceNameNull sql.NullString
+	var priceNull sql.NullFloat64
+
+	err = config.DB.QueryRow(query, bookingID).Scan(&userIDNull, &serviceNameNull, &serviceID, &priceNull)
+	if err != nil {
+		return "", "", "", 0, err
+	}
+
+	if userIDNull.Valid {
+		userID = userIDNull.String
+	}
+	if serviceNameNull.Valid {
+		serviceName = serviceNameNull.String
+	}
+	if priceNull.Valid {
+		price = priceNull.Float64
+	}
+
+	// Fetch first service image
+	imageURL = ""
+	if serviceID.Valid {
+		imgQuery := `
+		SELECT image_url 
+		FROM Service_Images 
+		WHERE service_id = ? 
+		ORDER BY created_at ASC
+		LIMIT 1
+		`
+		var img sql.NullString
+		err = config.DB.QueryRow(imgQuery, serviceID.String).Scan(&img)
+		if err == nil && img.Valid {
+			imageURL = img.String
+		} else {
+			imageURL = "" // no image found
+		}
+	}
+
+	return imageURL, serviceName, userID, price, nil
+}

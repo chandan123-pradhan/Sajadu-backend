@@ -44,3 +44,20 @@ func UpdateBookingStatus(bookingID, restaurantID, newStatus string) error {
 	}
 	return nil
 }
+
+
+
+
+func GetBookingServiceSummary(bookingID string) (adminmodel.BookingServiceSummary, error) {
+	imageURL, serviceName, userID, price, err := adminrepo.GetBookingServiceSummary(bookingID)
+	if err != nil {
+		return adminmodel.BookingServiceSummary{}, err
+	}
+
+	return adminmodel.BookingServiceSummary{
+		ImageURL:    imageURL,
+		ServiceName: serviceName,
+		UserID:      userID,
+		Price:       price,
+	}, nil
+}
