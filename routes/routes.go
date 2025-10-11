@@ -39,6 +39,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/users/search-service", usercontroller.SearchServices).Methods("POST")	
 	router.HandleFunc("/users/update-fcm", usercontroller.UpdateFcmTokenHandler).Methods("POST")
 	router.HandleFunc("/users/cancel-booking", usercontroller.CancelBooking).Methods("POST")
+	router.HandleFunc("/users/get-notifications", usercontroller.GetUserNotifications).Methods("GET")	
 	
 	// Restorant APIS.
 
@@ -55,7 +56,9 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/restorant/assign-staff-booking", restorantcontrollers.AssignStaffToBooking).Methods("POST")
 	router.HandleFunc("/restorant/booking-details/{id}", restorantcontrollers.GetBookingDetails).Methods("GET")
 	router.HandleFunc("/restorant/update-fcm", restorantcontrollers.UpdateFcmTokenHandler).Methods("POST")
+	router.HandleFunc("/restorant/get-notifications", restorantcontrollers.GetRestorantNotifications).Methods("GET")
 
+	
 	// Staff Apis.
 	router.HandleFunc("/staff/login", staffcontrollers.LoginStaffHandler).Methods("POST")
 	router.HandleFunc("/staff/get-bookings", staffcontrollers.GetAllAssignedBookings).Methods("GET")

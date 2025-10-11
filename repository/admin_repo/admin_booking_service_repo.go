@@ -466,6 +466,7 @@ func GetBookingServiceSummary(bookingID string) (imageURL, serviceName, userID s
 			imageURL = "" // no image found
 		}
 	}
+	fmt.Println(imageURL)
 
 	return imageURL, serviceName, userID, price, nil
 }

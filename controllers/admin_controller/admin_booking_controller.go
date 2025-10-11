@@ -122,6 +122,7 @@ func UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
 		summary.UserID,
 		summary.ServiceName,
 		req.NewStatus,
+		summary.ImageURL,
 	)
 	if err != nil {
 		// Notification failure should not block the main response
@@ -133,6 +134,7 @@ func UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
 		summary.ServiceName,
 		strconv.FormatFloat(summary.Price, 'f', 2, 64),
 		req.NewStatus,
+		summary.ImageURL,
 	)
 	if err != nil {
 		// Notification failure should not block the main response
