@@ -14,7 +14,7 @@ var jwtSecret = []byte("your_secret_key") // replace with a secure key
 func GenerateToken(userID string) (string, error) {
     claims := jwt.MapClaims{
         "user_id": userID,
-        "exp":     time.Now().Add(time.Hour * 24).Unix(), // 24h expiration
+        "exp": time.Now().Add(30 * 24 * time.Hour).Unix(), // 30days expiration
     }
 
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -57,7 +57,7 @@ func ValidateToken(r *http.Request) (string, error) {
 func GenerateRestaurantToken(restaurantID string) (string, error) {
 	claims := jwt.MapClaims{
 		"restaurant_id": restaurantID,
-		"exp":           time.Now().Add(24 * time.Hour).Unix(),
+		"exp":          time.Now().Add(30 * 24 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
