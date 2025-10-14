@@ -133,3 +133,67 @@ func GetRestorantFcmToken(restorantId string) (string, error) {
 	}
 	return fcmToken, nil
 }
+
+func UpdateRestaurantProfile(restaurant restorantmodels.RestaurantProfile) error {
+	query := `
+		UPDATE Restaurant_Profile 
+		SET 
+			name = ?, 
+			email = ?, 
+			phone_number = ?, 
+			address = ?, 
+			city = ?, 
+			state = ?, 
+			country = ?, 
+			latitude = ?, 
+			longitude = ?, 
+			postalCode = ?
+		WHERE restaurant_id = ?
+	`
+
+	_, err := config.DB.Exec(query,
+		restaurant.Name,
+		restaurant.Email,
+		restaurant.PhoneNumber,
+		restaurant.Address,
+		restaurant.City,
+		restaurant.State,
+		restaurant.Country,
+		restaurant.Latitude,
+		restaurant.Longitude,
+		restaurant.PostalCode,
+		restaurant.RestaurantID,
+	)
+
+	if err != nil {
+		fmt.Println("Error updating restaurant profile:", err)
+		return err
+	}
+
+	return nil
+}
+
+
+func UpdateRestaurantImages(restaurantID string, imageUrls []string) error {
+    // Delete old images first (optional)
+    deleteQuery := `DELETE FROM Restaurant_Images WHERE restaurant_id = ?`
+    _, err := config.DB.Exec(deleteQuery, restaurantID)
+    if err != nil {
+        return err
+    }
+
+    // Insert new images
+    insertQuery := `
+        INSERT INTO Restaurant_Images (image_id, restaurant_id, image_url)
+        VALUES (?, ?, ?)
+    `
+    for _, url := range imageUrls {
+        newUUID := uuid.New().String()
+        _, err := config.DB.Exec(insertQuery, newUUID, restaurantID, url)
+        if err != nil {
+            return err
+        }
+    }
+
+    return nil
+}

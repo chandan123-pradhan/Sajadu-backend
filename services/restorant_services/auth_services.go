@@ -86,3 +86,27 @@ func UpdateFcmToken(restorantId, fcmToken string) error {
 func GetRestorantFcmTokenService(restorantId string) (string, error) {
 	return restorantrepo.GetRestorantFcmToken(restorantId)
 }
+
+
+
+func UpdateRestaurantProfileService(restaurant restorantmodels.RestaurantProfile, imagePaths []string) error {
+	if restaurant.RestaurantID == "" {
+		return errors.New("restaurant ID is required")
+	}
+
+	// Update restaurant profile
+	err := restorantrepo.UpdateRestaurantProfile(restaurant)
+	if err != nil {
+		return err
+	}
+
+	// If new images provided → update them
+	if len(imagePaths) > 0 {
+		err = restorantrepo.UpdateRestaurantImages(restaurant.RestaurantID, imagePaths)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

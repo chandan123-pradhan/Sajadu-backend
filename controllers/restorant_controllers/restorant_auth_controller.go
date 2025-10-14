@@ -174,3 +174,66 @@ func UpdateFcmTokenHandler(w http.ResponseWriter, r *http.Request) {
         "fcm_token": req.FcmToken,
     }, "FCM token updated successfully")
 }
+
+
+
+
+func UpdateRestaurantProfile(w http.ResponseWriter, r *http.Request) {
+	// Validate token
+	restaurantID, err := utils.ValidateRestaurantToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, nil, "Unauthorized or invalid token")
+		return
+	}
+
+	// Parse multipart form data
+	err = r.ParseMultipartForm(20 << 20) // 20MB max
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "Failed to parse form data")
+		return
+	}
+
+	// Parse restaurant JSON field
+	var updatedData restorantmodels.RestaurantProfile
+	err = json.Unmarshal([]byte(r.FormValue("restaurant")), &updatedData)
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, nil, "Invalid restaurant data")
+		return
+	}
+	updatedData.RestaurantID = restaurantID
+
+	// Handle uploaded images (optional)
+	var imagePaths []string
+	files := r.MultipartForm.File["images"]
+	for _, fileHeader := range files {
+		path, err := utils.SaveFile(fileHeader, "uploads/restaurant_images")
+		if err != nil {
+			utils.SendResponse(w, http.StatusInternalServerError, false, nil, "Failed to save image")
+			return
+		}
+		imagePaths = append(imagePaths, path)
+	}
+
+	// Call service layer
+	err = restorantservices.UpdateRestaurantProfileService(updatedData, imagePaths)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError, false, nil, "Failed to update restaurant profile: "+err.Error())
+		return
+	}
+
+	// Success
+	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
+		"restaurant_id": updatedData.RestaurantID,
+		"name":          updatedData.Name,
+		"email":         updatedData.Email,
+		"phone_number":  updatedData.PhoneNumber,
+		"address":       updatedData.Address,
+		"city":          updatedData.City,
+		"state":         updatedData.State,
+		"country":       updatedData.Country,
+		"postal_code":   updatedData.PostalCode,
+		"latitude":      updatedData.Latitude,
+		"longitude":     updatedData.Longitude,
+		"images":        imagePaths,
+	}, "Restaurant profile and images updated successfully")
+}
