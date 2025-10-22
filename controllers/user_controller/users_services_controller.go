@@ -75,9 +75,6 @@ func GetServicesBasedOnCategory(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
-
-
 func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 	// Validate JWT token
 	_, err := utils.ValidateToken(r)
@@ -116,10 +113,11 @@ func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 
 	// Success response
 	utils.SendResponse(w, http.StatusOK, true, map[string]interface{}{
-		"service":    serviceWithRest.Service,
+		"service": serviceWithRest.Service,
+		"reviews": serviceWithRest.Reviews,
 	}, "Service details fetched successfully")
-}
 
+}
 
 func SearchServices(w http.ResponseWriter, r *http.Request) {
 	// Validate JWT token

@@ -11,7 +11,7 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 	query := `
 		SELECT 
 			service_id, category_id, service_name, service_description, 
-			service_price, created_at, updated_at
+			service_price, average_rating, created_at, updated_at
 		FROM Our_Services
 		WHERE category_id = ?
 	`
@@ -26,7 +26,6 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 
 	for rows.Next() {
 		var service restorantmodels.RestaurantService
-		
 
 		if err := rows.Scan(
 			&service.ServiceID,
@@ -34,13 +33,12 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 			&service.ServiceName,
 			&service.ServiceDescription,
 			&service.ServicePrice,
+			&service.AverageRating,
 			&service.CreatedAt,
 			&service.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
-
-		
 
 		// Fetch images for this service
 		imageRows, err := config.DB.Query("SELECT image_url FROM Service_Images WHERE service_id = ?", service.ServiceID)
@@ -66,14 +64,13 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 	return services, nil
 }
 
-
 func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant, error) {
 	var result restorantmodels.ServiceWithRestaurant
 
-	// Fetch only service details
+	// Fetch service details including average_rating
 	query := `
 		SELECT 
-			service_id, category_id, service_name, service_description, service_price, created_at, updated_at
+			service_id, category_id, service_name, service_description, service_price, average_rating, created_at, updated_at
 		FROM Our_Services
 		WHERE service_id = ?
 	`
@@ -85,6 +82,7 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 		&result.Service.ServiceName,
 		&result.Service.ServiceDescription,
 		&result.Service.ServicePrice,
+		&result.Service.AverageRating,
 		&result.Service.CreatedAt,
 		&result.Service.UpdatedAt,
 	)
@@ -99,7 +97,7 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 	}
 	defer imageRows.Close()
 
-	images := []string{} // empty slice to avoid null
+	var images []string
 	for imageRows.Next() {
 		var img string
 		if err := imageRows.Scan(&img); err != nil {
@@ -109,16 +107,37 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 	}
 	result.Service.Images = images
 
+	// ✅ Fetch reviews for this service
+	reviewRows, err := config.DB.Query(`
+		SELECT user_name, rating, review_text, created_at
+		FROM Service_Reviews
+		WHERE service_id = ?
+		ORDER BY created_at DESC
+	`, result.Service.ServiceID)
+	if err != nil {
+		fmt.Println(err.Error())
+		return result, err
+	}
+	defer reviewRows.Close()
+
+	var reviews []restorantmodels.ServiceReview
+	for reviewRows.Next() {
+		var r restorantmodels.ServiceReview
+		if err := reviewRows.Scan(&r.UserName, &r.Rating, &r.ReviewText, &r.CreatedAt); err != nil {
+			return result, err
+		}
+		reviews = append(reviews, r)
+	}
+	result.Reviews = reviews
+	fmt.Println("here we have")
 	return result, nil
 }
-
-
 
 func SearchServicesByName(search string) ([]restorantmodels.RestaurantService, error) {
 	query := `
 		SELECT 
 			service_id, category_id, service_name, service_description, 
-			service_price, created_at, updated_at
+			service_price,average_rating, created_at, updated_at
 		FROM Our_Services
 		WHERE service_name LIKE ?
 	`
@@ -141,6 +160,7 @@ func SearchServicesByName(search string) ([]restorantmodels.RestaurantService, e
 			&service.ServiceName,
 			&service.ServiceDescription,
 			&service.ServicePrice,
+			&service.AverageRating,
 			&service.CreatedAt,
 			&service.UpdatedAt,
 		); err != nil {

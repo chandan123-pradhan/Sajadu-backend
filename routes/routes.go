@@ -39,6 +39,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/users/search-service", usercontroller.SearchServices).Methods("POST")	
 	router.HandleFunc("/users/update-fcm", usercontroller.UpdateFcmTokenHandler).Methods("POST")
 	router.HandleFunc("/users/cancel-booking", usercontroller.CancelBooking).Methods("POST")
+	router.HandleFunc("/users/add-review", usercontroller.AddServiceReview).Methods("POST")	
 	router.HandleFunc("/users/get-notifications", usercontroller.GetUserNotifications).Methods("GET")	
 	
 	// Restorant APIS.
