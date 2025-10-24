@@ -123,46 +123,55 @@ func CreateBooking(req usermodels.BookingRequest) (usermodels.BookingResponse, e
 	return res, nil
 }
 
-
-// GetUserBookings fetches all bookings of a given user
+// GetUserBookings fetches all bookings of a given user with latest payment status
 func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, error) {
 	query := `
 	SELECT 
-		b.booking_id,
-		b.user_id,
-		b.restaurant_id,
-		b.service_id,
-		s.status_name,
-		b.scheduled_date,
-		b.address,
-		b.pincode,
-		b.state,
-		b.city,
-		b.service_name,
-		b.created_at,
-		b.start_verified,
-		b.complete_otp_hash,
-		b.price,
+    b.booking_id,
+    b.user_id,
+    b.restaurant_id,
+    b.service_id,
+    s.status_name,
+    b.scheduled_date,
+    b.address,
+    b.pincode,
+    b.state,
+    b.city,
+    b.service_name,
+    b.created_at,
+    b.start_verified,
+    b.complete_otp_hash,
+    b.price,
+    p.payment_id,
+    COALESCE(p.amount, 0) AS amount,
+    COALESCE(p.currency, '') AS currency,
+    COALESCE(p.payment_mode, '') AS payment_mode,
+    COALESCE(p.transaction_id, '') AS transaction_id,
+    p.payment_date,
+    COALESCE(p.payment_status, '') AS payment_status,
+    COALESCE(GROUP_CONCAT(si.image_url), '') AS images
+FROM bookings b
+JOIN booking_status s ON b.status_id = s.status_id
+LEFT JOIN (
+    SELECT p1.*
+    FROM payments p1
+    INNER JOIN (
+        SELECT booking_id, MAX(updated_at) AS latest_update
+        FROM payments
+        GROUP BY booking_id
+    ) p2 ON p1.booking_id = p2.booking_id AND p1.updated_at = p2.latest_update
+) p ON b.booking_id = p.booking_id
+LEFT JOIN Service_Images si ON b.service_id = si.service_id
+WHERE b.user_id = ?
+GROUP BY 
+    b.booking_id, b.user_id, b.restaurant_id, b.service_id, s.status_name, b.scheduled_date,
+    b.address, b.pincode, b.state, b.city, b.service_name, b.created_at,
+    b.start_verified, b.complete_otp_hash, b.price,
+    p.payment_id, p.amount, p.currency, p.payment_mode, p.transaction_id, p.payment_date, p.payment_status
+ORDER BY b.created_at DESC;
 
-		-- Payment details (may be NULL if no payment yet)
-		MAX(p.payment_id),
-		COALESCE(MAX(p.amount), 0),
-		COALESCE(MAX(p.currency), ''),
-		COALESCE(MAX(p.payment_mode), ''),
-		COALESCE(MAX(p.transaction_id), ''),
-		MAX(p.payment_date),
-		COALESCE(MAX(p.payment_status), ''),
 
-		-- ✅ Fetch service images (aggregated)
-		COALESCE(GROUP_CONCAT(si.image_url), '')
-	FROM bookings b
-	JOIN booking_status s ON b.status_id = s.status_id
-	LEFT JOIN payments p ON b.booking_id = p.booking_id
-	LEFT JOIN Service_Images si ON b.service_id = si.service_id
-	WHERE b.user_id = ?
-	GROUP BY b.booking_id
-	ORDER BY b.created_at DESC
-`
+	`
 
 	rows, err := config.DB.Query(query, userID)
 	if err != nil {
@@ -180,7 +189,8 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 		var amount sql.NullFloat64
 		var startVerified bool
 		var serviceImages sql.NullString
-        var restaurantID sql.NullString
+		var restaurantID sql.NullString
+
 		err := rows.Scan(
 			&booking.BookingID,
 			&booking.UserID,
@@ -204,14 +214,13 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 			&transactionID,
 			&paymentDate,
 			&paymentStatus,
-			&serviceImages, // NEW
+			&serviceImages,
 		)
 		if err != nil {
 			return usermodels.UserBookingsWrapper{Bookings: []usermodels.BookingResponse{}}, err
 		}
 
-		
-		// If payment exists, populate PaymentResponse
+		// Map payment if exists
 		if paymentID.Valid {
 			payment.PaymentID = paymentID.String
 			payment.Amount = amount.Float64
@@ -227,7 +236,7 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 			booking.Payment = nil
 		}
 
-		// Assign decrypted complete OTP only if start_verified is true
+		// Decrypt OTP if booking started
 		if startVerified && completeOtpHash.Valid {
 			decryptedOtp, err := utils.DecryptOTP(completeOtpHash.String, otpKey)
 			if err == nil {
@@ -253,7 +262,6 @@ func GetUserBookings(userID, otpKey string) (usermodels.UserBookingsWrapper, err
 
 	return usermodels.UserBookingsWrapper{Bookings: bookings}, nil
 }
-
 
 
 

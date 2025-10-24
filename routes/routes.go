@@ -3,6 +3,7 @@ package routes
 import (
 	"decoration_project/controllers"
 	admincontroller "decoration_project/controllers/admin_controller"
+	paymentcontroller "decoration_project/controllers/payment_controller"
 	restorantcontrollers "decoration_project/controllers/restorant_controllers"
 	staffcontrollers "decoration_project/controllers/staff_controllers"
 	usercontroller "decoration_project/controllers/user_controller"
@@ -14,6 +15,9 @@ import (
 
 func InitializeRoutes() http.Handler {
 	router := mux.NewRouter()
+	paymentCtrl := paymentcontroller.NewPaymentController()
+
+
 
 	// Admin Apis.
 	router.HandleFunc("/admin/get_category", controllers.GetCategories).Methods("GET")
@@ -41,6 +45,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/users/cancel-booking", usercontroller.CancelBooking).Methods("POST")
 	router.HandleFunc("/users/add-review", usercontroller.AddServiceReview).Methods("POST")	
 	router.HandleFunc("/users/get-notifications", usercontroller.GetUserNotifications).Methods("GET")	
+	router.HandleFunc("/users/get-refund",paymentCtrl.RefundHandler).Methods("POST")
 	
 	// Restorant APIS.
 

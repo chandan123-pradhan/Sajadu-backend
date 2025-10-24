@@ -114,6 +114,48 @@ func SendBookingNotificationToUser(userId string, item string, reason string, im
 	return nil
 }
 
+
+
+func SendBookingNormalNotificationToUser(userId string, title string, description string) error {
+	// Fetch the user's FCM token
+	userToken, err := userrepo.GetUserFcmToken(userId)
+	if err != nil {
+		log.Println("Failed to fetch user FCM token:", err)
+		return err
+	}
+
+	if userToken == "" {
+		log.Println("No user FCM token found")
+		return nil
+	}
+
+	// Prepare notification content
+	
+	// Save notification log in DB
+	notification := usermodels.UserNotification{
+		UserID:      userId,
+		Title:       title,
+		Description: description,
+		Image:       "",
+	}
+
+	if err := userservices.SaveNotificationService(notification); err != nil {
+		log.Println("⚠️ Failed to save notification log:", err)
+		return err
+	}
+	log.Println("💾 Notification saved to UserNotification table successfully")
+
+	// Send notification via FCM service
+	if err := services.SendNotification(userToken, title, description); err != nil {
+		log.Println("Failed to send notification:", err)
+		return err
+	}
+
+	log.Println("✅ Notification sent to user successfully")
+	return nil
+}
+
+
 /*
 SendBookingNotificationToRestorant
 ---------------------------------
