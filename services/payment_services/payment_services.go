@@ -10,6 +10,6 @@ func NewPaymentService(repo *paymentrepo.RazorpayRepository) *PaymentService {
 	return &PaymentService{repo: repo}
 }
 
-func (s *PaymentService) Refund(paymentID string,transactionId string, amount int, bookingID string) (map[string]interface{}, error) {
+func (s *PaymentService) Refund(paymentID string,transactionId string, amount float64, bookingID string) (map[string]interface{}, error) {
 	return s.repo.Refund(paymentID,transactionId, amount, bookingID)
 }

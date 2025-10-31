@@ -42,7 +42,7 @@ func (c *PaymentController) RefundHandler(w http.ResponseWriter, r *http.Request
 		BookingID string `json:"booking_id"`
 		PaymentID string `json:"payment_id"`
 		TransactionId string `json:"transaction_id"`
-		Amount    int    `json:"amount"`
+		Amount    float64    `json:"amount"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendResponse(w, http.StatusBadRequest, false, nil, "Invalid request body: "+err.Error())
