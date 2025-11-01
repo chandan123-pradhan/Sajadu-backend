@@ -22,7 +22,7 @@ func NewRazorpayRepository(apiKey, apiSecret string) *RazorpayRepository {
 	}
 }
 
-func (r *RazorpayRepository) Refund(paymentID string, transactionId string, amount float64, bookingID string) (map[string]interface{}, error) {
+func (r *RazorpayRepository) Refund(paymentID string, transactionId string, amount int, bookingID string) (map[string]interface{}, error) {
 	if paymentID == "" || bookingID == ""  || transactionId==""{
 		return nil, errors.New("paymentID and bookingID and transaction id are required")
 	}
@@ -31,12 +31,7 @@ func (r *RazorpayRepository) Refund(paymentID string, transactionId string, amou
 	url := fmt.Sprintf("https://api.razorpay.com/v1/payments/%s/refund", transactionId)
 
 	body := map[string]interface{}{
-    "amount": int(amount),
-    "speed": "normal",
-    "notes": map[string]string{
-        "reason": "User requested refund",
-        "booking_id": bookingID,
-    },
+		"amount": amount,
 }
 
 
