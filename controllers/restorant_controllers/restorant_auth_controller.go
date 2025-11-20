@@ -237,3 +237,74 @@ func UpdateRestaurantProfile(w http.ResponseWriter, r *http.Request) {
 		"images":        imagePaths,
 	}, "Restaurant profile and images updated successfully")
 }
+
+
+
+
+func SentOtp(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		MobileNumber string `json:"mobile_no"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body")
+		return
+	}
+
+	if req.MobileNumber == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Mobile number is required")
+		return
+	}
+
+	if len(req.MobileNumber) != 10 {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Mobile number must be 10 digits")
+		return
+	}
+
+	for _, c := range req.MobileNumber {
+		if c < '0' || c > '9' {
+			utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Mobile number must contain only digits")
+			return
+		}
+	}
+
+	otp, err := restorantservices.SendOtp(req.MobileNumber)
+	if err != nil {
+		// NEVER return nil → return empty map
+		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, err.Error())
+		return
+	}
+
+	resp := map[string]interface{}{
+		"otp": otp,
+	}
+
+	utils.SendResponse(w, http.StatusOK, true, resp, "OTP sent successfully.")
+}
+
+
+func VerifyOtp(w http.ResponseWriter, r *http.Request) {
+
+	var req struct {
+		Mobile string `json:"mobile_no"`
+		Otp    string `json:"otp"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid request body")
+		return
+	}
+
+	if req.Mobile == "" || req.Otp == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Mobile number and OTP are required")
+		return
+	}
+
+	data, err := restorantservices.VerifyOtp(req.Mobile, req.Otp)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, err.Error())
+		return
+	}
+
+	utils.SendResponse(w, http.StatusOK, true, data, "Login successful")
+}

@@ -110,3 +110,63 @@ func UpdateRestaurantProfileService(restaurant restorantmodels.RestaurantProfile
 
 	return nil
 }
+
+
+
+
+
+func SendOtp(mobileNo string) (string, error) {
+
+    // 1. Check user exists
+    restorant, err := restorantrepo.GetRestaurantByMobileNo(mobileNo)
+    if err != nil {
+        return "", errors.New("mobile number not registered")
+    }
+
+    // 2. Now user exists → pass userID to SendOTP
+    restorantId := &restorant.RestaurantID
+
+    otp, err := restorantrepo.SendOTP(mobileNo, restorantId)
+    if err != nil {
+        return "", err
+    }
+
+    return otp, nil
+}
+
+
+func VerifyOtp(mobile string, otp string) (map[string]interface{}, error) {
+
+    // 1. Verify OTP
+    _, err := restorantrepo.VerifyOTP(mobile, otp)
+    if err != nil {
+        return nil, err
+    }
+
+    // 2. Fetch restaurant data using mobile number
+    restorant, err := restorantrepo.GetRestaurantByMobileNo(mobile)
+    if err != nil {
+        return nil, errors.New("restaurant not found")
+    }
+
+    // 3. Now fetch restaurant details + images + hashed password (same as login)
+    restaurantData, images, _, err := restorantrepo.GetRestaurantWithImages(restorant.Email)
+    if err != nil {
+        return nil, errors.New("failed to fetch restaurant data")
+    }
+
+    // 4. Generate token (same as login)
+    token, err := utils.GenerateRestaurantToken(restaurantData.RestaurantID)
+    if err != nil {
+        return nil, errors.New("failed to generate token")
+    }
+
+    // 5. Final response (same structure as LoginRestaurant)
+    response := map[string]interface{}{
+        "token":      token,
+        "restaurant": restaurantData,
+        "images":     images,
+    }
+
+    return response, nil
+}

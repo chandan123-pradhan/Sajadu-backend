@@ -65,6 +65,8 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/restorant/get-notifications", restorantcontrollers.GetRestorantNotifications).Methods("GET")
 	router.HandleFunc("/restorant/update-profile", restorantcontrollers.UpdateRestaurantProfile).Methods("POST")
 	router.HandleFunc("/restorant/add-services", restorantcontrollers.AddServiceByRestorant).Methods("POST")
+	router.HandleFunc("/restorant/generate-otp", restorantcontrollers.SentOtp).Methods("POST")
+	router.HandleFunc("/restorant/login-via-otp", restorantcontrollers.VerifyOtp).Methods("POST")
 	// Staff Apis.
 	router.HandleFunc("/staff/login", staffcontrollers.LoginStaffHandler).Methods("POST")
 	router.HandleFunc("/staff/get-bookings", staffcontrollers.GetAllAssignedBookings).Methods("GET")
