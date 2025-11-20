@@ -35,4 +35,5 @@ type BookingResponse struct {
 	Images          []string         `json:"images"`            // service images
 	RestaurantName  string           `json:"restaurant_name,omitempty"`
 	RestaurantImages []string        `json:"restaurant_images,omitempty"`
+	ProposedRestorantId string 		 `json:"proposed_restorant_id"`
 }

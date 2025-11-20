@@ -99,6 +99,7 @@ func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 		"images":              service.Images, // list of image URLs
 		"created_at":          service.CreatedAt,
 		"updated_at":          service.UpdatedAt,
+		"proposed_restorant_id": service.ProposedRestorantId,
 	}
 
 	utils.SendResponse(w, http.StatusOK, true, responseData, "Service details fetched successfully")
@@ -132,6 +133,7 @@ func GetAllServiceCategoryWise(w http.ResponseWriter, r *http.Request) {
             "images":              service.Images, // list of image URLs
             "created_at":          service.CreatedAt,
             "updated_at":          service.UpdatedAt,
+			"proposed_restorant_id":			service.ProposedRestorantId,
         })
     }
 

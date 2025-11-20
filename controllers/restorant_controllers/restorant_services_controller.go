@@ -1,86 +1,85 @@
 package restorantcontrollers
 
-// import (
-// 	"decoration_project/models"
-// 	restorantmodels "decoration_project/models/restorant_models"
-// 	"decoration_project/repository"
-// 	restorantservices "decoration_project/services/restorant_services"
-// 	"decoration_project/utils"
-// 	"encoding/json"
-// 	"fmt"
-// 	"net/http"
-// )
+import (
+	restorantmodels "decoration_project/models/restorant_models"
+	adminserices "decoration_project/services/admin_serices"
+	"decoration_project/utils"
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
 
-// // ======================= ADD SERVICE =======================
-// func AddService(w http.ResponseWriter, r *http.Request) {
-// 	// Validate restaurant token
-// 	restaurantID, err := utils.ValidateRestaurantToken(r)
-// 	if err != nil {
-// 		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, err.Error())
-// 		return
-// 	}
+// ======================= ADD SERVICE =======================
+func AddServiceByRestorant(w http.ResponseWriter, r *http.Request) {
+	// Validate restaurant token
+	restaurantID, err := utils.ValidateRestaurantToken(r)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, err.Error())
+		return
+	}
 
-// 	// Parse multipart form data (for images + JSON fields)
-// 	err = r.ParseMultipartForm(10 << 20) // 10MB max upload
-// 	if err != nil {
-// 		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Failed to parse form data")
-// 		return
-// 	}
+	// Parse multipart form data (for images + JSON fields)
+	err = r.ParseMultipartForm(10 << 20) // 10MB max upload
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Failed to parse form data")
+		return
+	}
 
-// 	// Extract service details from "service" field (JSON string)
-// 	var service restorantmodels.RestaurantService
-// 	serviceData := r.FormValue("service")
-// 	if serviceData == "" {
-// 		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Service JSON is required")
-// 		return
-// 	}
+	// Extract service details from "service" field (JSON string)
+	var service restorantmodels.RestaurantService
+	serviceData := r.FormValue("service")
+	if serviceData == "" {
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Service JSON is required")
+		return
+	}
 
-// 	err = json.Unmarshal([]byte(serviceData), &service)
-// 	if err != nil {
-// 		fmt.Println(err.Error())
-// 		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid service JSON")
-// 		return
-// 	}
+	err = json.Unmarshal([]byte(serviceData), &service)
+	if err != nil {
+		fmt.Println(err.Error())
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Invalid service JSON")
+		return
+	}
 
-// 	// Assign restaurant ID from token
-// 	service.RestaurantID = restaurantID
+  
+// Validate required fields
+	if service.ServiceName == "" || service.ServiceDescription == "" || service.ServicePrice == 0 || service.CategoryId == ""{
+		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Service name, description, Category ID,  Proposed Restorant ID and price are required")
+		return
+	}
 
-// 	// Validate required fields
-// 	if service.ServiceName == "" || service.ServiceDescription == "" || service.ServicePrice == 0 || service.CategoryId == ""{
-// 		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "Service name, description, Category ID, and price are required")
-// 		return
-// 	}
+	service.ProposedRestorantId=restaurantID
 
-// 	// Validate items JSON
-	
-// 	// Handle multiple image files
-// 	var imagePaths []string
-// 	files := r.MultipartForm.File["images"]
-// 	for _, fileHeader := range files {
-// 		path, err := utils.SaveFile(fileHeader, "uploads/services")
-// 		if err != nil {
-// 			utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to save image")
-// 			return
-// 		}
-// 		imagePaths = append(imagePaths, path)
-// 	}
+	// Handle multiple image files
+	var imagePaths []string
+	files := r.MultipartForm.File["images"]
+	for _, fileHeader := range files {
+		path, err := utils.SaveFile(fileHeader, "uploads/services")
+		if err != nil {
+			utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, "Failed to save image")
+			return
+		}
+		imagePaths = append(imagePaths, path)
+	}
 
-// 	// Save service
-// 	serviceID, err := restorantservices.CreateService(service, imagePaths)
-// 	if err != nil {
-// 		fmt.Println(err.Error())
-// 		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, err.Error())
-// 		return
-// 	}
+	// Save service
+	serviceID, err := adminserices.CreateService(service, imagePaths)
+	if err != nil {
+		fmt.Println(err.Error())
+		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, err.Error())
+		return
+	}
 
-// 	// Prepare response
-// 	responseData := map[string]interface{}{
-// 		"service_id": serviceID,
-// 		"images":     imagePaths,
-// 	}
+	// Prepare response
+	responseData := map[string]interface{}{
+		"service_id": serviceID,
+		"images":     imagePaths,
+	}
 
-// 	utils.SendResponse(w, http.StatusCreated, true, responseData, "Service created successfully")
-// }
+	utils.SendResponse(w, http.StatusCreated, true, responseData, "Service created successfully")
+
+
+
+}
 
 // // ======================= GET SERVICE DETAILS =======================
 // func GetServiceDetails(w http.ResponseWriter, r *http.Request) {

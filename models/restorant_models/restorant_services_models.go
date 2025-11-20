@@ -13,6 +13,7 @@ type RestaurantService struct {
     Images             []string  `json:"images,omitempty"`
     CreatedAt          time.Time `json:"created_at"`
     UpdatedAt          time.Time `json:"updated_at"`
+    ProposedRestorantId string   `json:"proposed_restorant_id"`
 }
 
 // ServiceImage represents an image associated with a service

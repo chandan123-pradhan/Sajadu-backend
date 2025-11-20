@@ -211,6 +211,7 @@ func GetBookingDetailsByID(bookingID string) (adminmodel.BookingResponse, error)
 		srv.service_name,
 		srv.service_description,
 		srv.service_price,
+		srv.proposed_restaurant_id,
 		b.status_id,
 		b.scheduled_date,
 		b.address,
@@ -234,6 +235,7 @@ func GetBookingDetailsByID(bookingID string) (adminmodel.BookingResponse, error)
 	var scheduledDate sql.NullTime
 	var statusName sql.NullString
 	var serviceDescription sql.NullString
+	var proposedRestaurantID string
 
 	err := config.DB.QueryRow(query, bookingID).Scan(
 		&booking.BookingID,
@@ -243,6 +245,7 @@ func GetBookingDetailsByID(bookingID string) (adminmodel.BookingResponse, error)
 		&booking.ServiceName,
 		&booking.ServiceDesc,
 		&servicePrice,
+		&proposedRestaurantID, 
 		new(interface{}), // status_id, not needed
 		&scheduledDate,
 		&booking.Address,
@@ -293,6 +296,7 @@ func GetBookingDetailsByID(bookingID string) (adminmodel.BookingResponse, error)
 	if serviceDescription.Valid {
 		booking.ServiceDesc = serviceDescription.String
 	}
+	booking.ProposedRestorantId=proposedRestaurantID
 
 	// Fetch service images
 	booking.Images = []string{}

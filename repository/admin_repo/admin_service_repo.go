@@ -12,8 +12,8 @@ func AddService(service restorantmodels.RestaurantService) (string, error) {
 	serviceID := uuid.New().String()
 	query := `
         INSERT INTO Our_Services 
-        (service_id, category_id, service_name, service_description, service_price)
-        VALUES (?, ?, ?, ?, ?)
+        (service_id, category_id, service_name, service_description, service_price, proposed_restaurant_id)
+        VALUES (?, ?, ?, ?, ?, ?)
     `
 	_, err := config.DB.Exec(query,
 		serviceID,
@@ -21,6 +21,7 @@ func AddService(service restorantmodels.RestaurantService) (string, error) {
 		service.ServiceName,
 		service.ServiceDescription,
 		service.ServicePrice,
+		service.ProposedRestorantId,
 	)
 	if err != nil {
 		return "", err
@@ -44,13 +45,13 @@ func AddServiceImages(serviceID string, images []string) error {
 func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, []string, error) {
 	var service restorantmodels.RestaurantService
 	query := `
-        SELECT service_id, category_id, service_name, service_description, service_price
+        SELECT service_id, category_id, service_name, service_description, service_price, proposed_restaurant_id
         FROM Our_Services
         WHERE service_id = ?
     `
 	row := config.DB.QueryRow(query, serviceID)
 	err := row.Scan(&service.ServiceID, &service.CategoryId,
-		&service.ServiceName, &service.ServiceDescription, &service.ServicePrice)
+		&service.ServiceName, &service.ServiceDescription, &service.ServicePrice, &service.ProposedRestorantId)
 	if err != nil {
 		return service, nil, err
 	}
@@ -78,7 +79,7 @@ func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, 
 func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantService, error) {
 	var services []restorantmodels.RestaurantService
 
-	query := `SELECT service_id, category_id, service_name, service_description, service_price, created_at, updated_at
+	query := `SELECT service_id, category_id, service_name, service_description, service_price, proposed_restaurant_id, created_at, updated_at
               FROM Our_Services
               WHERE category_id = ?`
 	rows, err := config.DB.Query(query, categoryId)
@@ -95,6 +96,7 @@ func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantS
 			&service.ServiceName,
 			&service.ServiceDescription,
 			&service.ServicePrice,
+			&service.ProposedRestorantId,
 			&service.CreatedAt,
 			&service.UpdatedAt,
 		); err != nil {

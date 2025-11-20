@@ -11,7 +11,7 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 	query := `
 		SELECT 
 			service_id, category_id, service_name, service_description, 
-			service_price, average_rating, created_at, updated_at
+			service_price, average_rating,proposed_restaurant_id, created_at, updated_at
 		FROM Our_Services
 		WHERE category_id = ?
 	`
@@ -34,6 +34,7 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 			&service.ServiceDescription,
 			&service.ServicePrice,
 			&service.AverageRating,
+			&service.ProposedRestorantId,
 			&service.CreatedAt,
 			&service.UpdatedAt,
 		); err != nil {
@@ -70,7 +71,7 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 	// Fetch service details including average_rating
 	query := `
 		SELECT 
-			service_id, category_id, service_name, service_description, service_price, average_rating, created_at, updated_at
+			service_id, category_id, service_name, service_description, service_price, average_rating,proposed_restaurant_id, created_at, updated_at
 		FROM Our_Services
 		WHERE service_id = ?
 	`
@@ -83,6 +84,7 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 		&result.Service.ServiceDescription,
 		&result.Service.ServicePrice,
 		&result.Service.AverageRating,
+		&result.Service.ProposedRestorantId,
 		&result.Service.CreatedAt,
 		&result.Service.UpdatedAt,
 	)
@@ -137,7 +139,7 @@ func SearchServicesByName(search string) ([]restorantmodels.RestaurantService, e
 	query := `
 		SELECT 
 			service_id, category_id, service_name, service_description, 
-			service_price,average_rating, created_at, updated_at
+			service_price,average_rating, proposed_restaurant_id, created_at, updated_at
 		FROM Our_Services
 		WHERE service_name LIKE ?
 	`
@@ -161,6 +163,7 @@ func SearchServicesByName(search string) ([]restorantmodels.RestaurantService, e
 			&service.ServiceDescription,
 			&service.ServicePrice,
 			&service.AverageRating,
+			&service.ProposedRestorantId,
 			&service.CreatedAt,
 			&service.UpdatedAt,
 		); err != nil {
