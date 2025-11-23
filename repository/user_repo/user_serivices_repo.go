@@ -8,13 +8,15 @@ import (
 
 func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantService, error) {
 	// Fetch services for the category
-	query := `
-		SELECT 
-			service_id, category_id, service_name, service_description, 
-			service_price, average_rating,proposed_restaurant_id, created_at, updated_at
-		FROM Our_Services
-		WHERE category_id = ?
-	`
+query := `
+    SELECT 
+        service_id, category_id, service_name, service_description,
+        service_price, average_rating,
+        COALESCE(proposed_restaurant_id, '') AS proposed_restaurant_id,
+        created_at, updated_at
+    FROM Our_Services
+    WHERE category_id = ?
+`
 
 	rows, err := config.DB.Query(query, categoryID)
 	if err != nil {
