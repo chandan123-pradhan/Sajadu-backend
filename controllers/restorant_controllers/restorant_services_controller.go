@@ -1,7 +1,9 @@
 package restorantcontrollers
 
 import (
+	"decoration_project/models"
 	restorantmodels "decoration_project/models/restorant_models"
+	"decoration_project/repository"
 	adminserices "decoration_project/services/admin_serices"
 	"decoration_project/utils"
 	"encoding/json"
@@ -157,30 +159,30 @@ func AddServiceByRestorant(w http.ResponseWriter, r *http.Request) {
 // }
 
 
-// func GetCategoryRestorant(w http.ResponseWriter, r *http.Request) {
-//     // Validate JWT token
-//     _, err := utils.ValidateRestaurantToken(r)
-//     if err != nil {
-//         utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized: "+err.Error())
-//         return
-//     }
+func GetCategoryRestorant(w http.ResponseWriter, r *http.Request) {
+    // Validate JWT token
+    _, err := utils.ValidateRestaurantToken(r)
+    if err != nil {
+        utils.SendResponse(w, http.StatusUnauthorized, false, map[string]interface{}{}, "Unauthorized: "+err.Error())
+        return
+    }
 
-//     // Fetch categories from DB
-//     categories, err := repository.GetAllCategories()
-//     if err != nil {
-//         utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{
-//             "category": []interface{}{},
-//         }, "Failed to fetch categories")
-//         return
-//     }
+    // Fetch categories from DB
+    categories, err := repository.GetAllCategories()
+    if err != nil {
+        utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{
+            "category": []interface{}{},
+        }, "Failed to fetch categories")
+        return
+    }
 
-//     if categories == nil {
-//         categories = []models.ProductCategory{}
-//     }
+    if categories == nil {
+        categories = []models.ProductCategory{}
+    }
 
-//     data := map[string]interface{}{
-//         "category": categories,
-//     }
+    data := map[string]interface{}{
+        "category": categories,
+    }
 
-//     utils.SendResponse(w, http.StatusOK, true, data, "Categories fetched successfully")
-// }
+    utils.SendResponse(w, http.StatusOK, true, data, "Categories fetched successfully")
+}

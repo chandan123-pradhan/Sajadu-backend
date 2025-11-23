@@ -51,7 +51,7 @@ func InitializeRoutes() http.Handler {
 
 	router.HandleFunc("/restorant/create_account", restorantcontrollers.RegisterRestaurant).Methods("POST")
 	router.HandleFunc("/restorant/login", restorantcontrollers.LoginRestaurant).Methods("POST")
-	// router.HandleFunc("/restorant/get-category", restorantcontrollers.GetCategoryRestorant).Methods("GET")
+	router.HandleFunc("/restorant/get-category", restorantcontrollers.GetCategoryRestorant).Methods("GET")
 	// router.HandleFunc("/restorant/create-services", restorantcontrollers.AddService).Methods("POST")
 	// router.HandleFunc("/restorant/get-service", restorantcontrollers.GetServiceDetails).Methods("GET")
 	// router.HandleFunc("/restorant/get-all-services", restorantcontrollers.GetAllServicesForRestaurant).Methods("GET")
