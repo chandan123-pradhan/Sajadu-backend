@@ -235,7 +235,7 @@ func GetBookingDetailsByID(bookingID string) (adminmodel.BookingResponse, error)
 	var scheduledDate sql.NullTime
 	var statusName sql.NullString
 	var serviceDescription sql.NullString
-	var proposedRestaurantID string
+	var proposedRestaurantID sql.NullString
 
 	err := config.DB.QueryRow(query, bookingID).Scan(
 		&booking.BookingID,
@@ -296,8 +296,11 @@ func GetBookingDetailsByID(bookingID string) (adminmodel.BookingResponse, error)
 	if serviceDescription.Valid {
 		booking.ServiceDesc = serviceDescription.String
 	}
-	booking.ProposedRestorantId=proposedRestaurantID
-
+	if proposedRestaurantID.Valid {
+			booking.ProposedRestorantId = proposedRestaurantID.String
+		} else {
+			booking.ProposedRestorantId = "" // default empty string
+		}
 	// Fetch service images
 	booking.Images = []string{}
 	imgRows, err := config.DB.Query(`SELECT image_url FROM Service_Images WHERE service_id = ?`, booking.ServiceID)
