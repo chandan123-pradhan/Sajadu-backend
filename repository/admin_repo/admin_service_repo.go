@@ -1,6 +1,7 @@
 package adminrepo
 
 import (
+	"database/sql"
 	"decoration_project/config"
 	restorantmodels "decoration_project/models/restorant_models"
 
@@ -44,6 +45,7 @@ func AddServiceImages(serviceID string, images []string) error {
 // GetServiceWithImages fetches a single service along with its images
 func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, []string, error) {
 	var service restorantmodels.RestaurantService
+	var proposedRestaurantID sql.NullString
 	query := `
         SELECT service_id, category_id, service_name, service_description, service_price, proposed_restaurant_id
         FROM Our_Services
@@ -51,9 +53,14 @@ func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, 
     `
 	row := config.DB.QueryRow(query, serviceID)
 	err := row.Scan(&service.ServiceID, &service.CategoryId,
-		&service.ServiceName, &service.ServiceDescription, &service.ServicePrice, &service.ProposedRestorantId)
+		&service.ServiceName, &service.ServiceDescription, &service.ServicePrice, &proposedRestaurantID)
 	if err != nil {
 		return service, nil, err
+	}
+	if proposedRestaurantID.Valid {
+		service.ProposedRestorantId = proposedRestaurantID.String
+	} else {
+		service.ProposedRestorantId = "" // default empty string
 	}
 
 	// Fetch images
@@ -78,6 +85,7 @@ func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, 
 // GetAllServicesWithImages fetches all services for a restaurant with images
 func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantService, error) {
 	var services []restorantmodels.RestaurantService
+	var proposedRestaurantID sql.NullString
 
 	query := `SELECT service_id, category_id, service_name, service_description, service_price, proposed_restaurant_id, created_at, updated_at
               FROM Our_Services
@@ -96,11 +104,16 @@ func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantS
 			&service.ServiceName,
 			&service.ServiceDescription,
 			&service.ServicePrice,
-			&service.ProposedRestorantId,
+			&proposedRestaurantID,
 			&service.CreatedAt,
 			&service.UpdatedAt,
 		); err != nil {
 			return nil, err
+		}
+		if proposedRestaurantID.Valid {
+			service.ProposedRestorantId = proposedRestaurantID.String
+		} else {
+			service.ProposedRestorantId = "" // default empty string
 		}
 
 		// Fetch images for this service
@@ -109,7 +122,7 @@ func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantS
 			return nil, err
 		}
 
-		images := []string{} 
+		images := []string{}
 		for imgRows.Next() {
 			var url string
 			if err := imgRows.Scan(&url); err != nil {
