@@ -157,3 +157,66 @@ func SearchServices(w http.ResponseWriter, r *http.Request) {
 		"services": services,
 	}, "Search results fetched successfully")
 }
+
+
+
+// GetAllFestivalOffers fetches all festival offers along with their services for users
+func GetAllFestivalOffers(w http.ResponseWriter, r *http.Request) {
+    // Validate JWT token
+    _, err := utils.ValidateToken(r)
+    if err != nil {
+        utils.SendResponse(w, http.StatusUnauthorized, false, []interface{}{}, "Unauthorized: "+err.Error())
+        return
+    }
+
+    // Fetch all festivals
+    festivals, err := userservices.GetAllFestivals()
+    if err != nil {
+        utils.SendResponse(w, http.StatusInternalServerError, false, []interface{}{}, err.Error())
+        return
+    }
+
+    // Prepare response
+    response := make([]map[string]interface{}, 0)
+
+    for _, f := range festivals {
+        // Fetch services for each festival
+        services, err := userservices.GetFestivalServices(f.FestivalID)
+        if err != nil {
+            utils.SendResponse(w, http.StatusInternalServerError, false, []interface{}{}, err.Error())
+            return
+        }
+
+        // Format service list
+        serviceList := make([]map[string]interface{}, 0)
+        for _, s := range services {
+            serviceList = append(serviceList, map[string]interface{}{
+                "service_id":            s.ServiceID,
+                "category_id":           s.CategoryId,
+                "service_name":          s.ServiceName,
+                "service_description":   s.ServiceDescription,
+                "service_price":         s.ServicePrice,
+                "discount_percent":      s.DiscountPercent,
+                "images":                s.Images,
+                "proposed_restorant_id": s.ProposedRestorantId,
+                "created_at":            s.CreatedAt,
+                "updated_at":            s.UpdatedAt,
+            })
+        }
+
+        // Append festival offer
+        response = append(response, map[string]interface{}{
+            "offer_id":   f.FestivalID,
+            "offer_name": f.FestivalName,
+            "services":   serviceList,
+        })
+    }
+
+    // Ensure empty list if no festivals
+    if len(response) == 0 {
+        response = []map[string]interface{}{}
+    }
+
+    // Send response
+    utils.SendResponse(w, http.StatusOK, true, response, "Festival offers fetched successfully")
+}

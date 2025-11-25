@@ -40,3 +40,6 @@ func AddCategory(category models.ProductCategory) (string, error) {
 	}
 	return newID, nil
 }
+
+
+

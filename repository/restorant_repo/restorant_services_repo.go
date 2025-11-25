@@ -1,128 +1,116 @@
 package restorantrepo
 
-// import (
-// 	"decoration_project/config"
-// 	restorantmodels "decoration_project/models/restorant_models"
+import (
+	"database/sql"
+	"decoration_project/config"
+	restorantmodels "decoration_project/models/restorant_models"
+)
 
-// 	"github.com/google/uuid"
-// )
+func GetAllProposedServices(restaurantID string) ([]restorantmodels.RestaurantService, error) {
+	var services []restorantmodels.RestaurantService
 
-// // AddService inserts a new service including CategoryId
-// func AddService(service restorantmodels.RestaurantService) (string, error) {
-// 	serviceID := uuid.New().String()
-// 	query := `
-//         INSERT INTO Restaurant_Services 
-//         (service_id, restaurant_id, category_id, service_name, service_description, service_price)
-//         VALUES (?, ?, ?, ?, ?, ?)
-//     `
-// 	_, err := config.DB.Exec(query,
-// 		serviceID,
-// 		service.RestaurantID,
-// 		service.CategoryId,
-// 		service.ServiceName,
-// 		service.ServiceDescription,
-// 		service.ServicePrice,
-// 	)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return serviceID, nil
-// }
+	query := `SELECT 
+				service_id, category_id, service_name, service_description, 
+				service_price, proposed_restaurant_id, created_at, updated_at
+			  FROM Our_Services
+			  WHERE proposed_restaurant_id = ?
+			  AND is_deleted = 0`   // <-- return only non-deleted services
 
-// // AddServiceImages inserts multiple images for a service
-// func AddServiceImages(serviceID string, images []string) error {
-// 	query := `INSERT INTO Service_Images (image_id, service_id, image_url) VALUES (?, ?, ?)`
-// 	for _, img := range images {
-// 		_, err := config.DB.Exec(query, uuid.New().String(), serviceID, img)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+	rows, err := config.DB.Query(query, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-// // GetServiceWithImages fetches a single service along with its images
-// func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, []string, error) {
-// 	var service restorantmodels.RestaurantService
-// 	query := `
-//         SELECT service_id, restaurant_id, category_id, service_name, service_description, service_price
-//         FROM Restaurant_Services
-//         WHERE service_id = ?
-//     `
-// 	row := config.DB.QueryRow(query, serviceID)
-// 	err := row.Scan(&service.ServiceID, &service.RestaurantID, &service.CategoryId,
-// 		&service.ServiceName, &service.ServiceDescription, &service.ServicePrice)
-// 	if err != nil {
-// 		return service, nil, err
-// 	}
+	for rows.Next() {
+		var service restorantmodels.RestaurantService
+		var proposedRestaurantID sql.NullString
 
-// 	// Fetch images
-// 	rows, err := config.DB.Query(`SELECT image_url FROM Service_Images WHERE service_id = ?`, serviceID)
-// 	if err != nil {
-// 		return service, nil, err
-// 	}
-// 	defer rows.Close()
+		err := rows.Scan(
+			&service.ServiceID,
+			&service.CategoryId,
+			&service.ServiceName,
+			&service.ServiceDescription,
+			&service.ServicePrice,
+			&proposedRestaurantID,
+			&service.CreatedAt,
+			&service.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
 
-// 	var images []string
-// 	for rows.Next() {
-// 		var img string
-// 		if err := rows.Scan(&img); err != nil {
-// 			return service, nil, err
-// 		}
-// 		images = append(images, img)
-// 	}
+		// Set proposed restaurant ID
+		if proposedRestaurantID.Valid {
+			service.ProposedRestorantId = proposedRestaurantID.String
+		} else {
+			service.ProposedRestorantId = ""
+		}
 
-// 	return service, images, nil
-// }
+		// Fetch images
+		imgQuery := `SELECT image_url FROM Service_Images WHERE service_id = ?`
+		imgRows, err := config.DB.Query(imgQuery, service.ServiceID)
+		if err != nil {
+			return nil, err
+		}
 
-// // GetAllServicesWithImages fetches all services for a restaurant with images
-// func GetAllServicesWithImages(restaurantID string) ([]restorantmodels.RestaurantService, error) {
-// 	var services []restorantmodels.RestaurantService
+		var images []string
+		for imgRows.Next() {
+			var url string
+			if err := imgRows.Scan(&url); err != nil {
+				imgRows.Close()
+				return nil, err
+			}
+			images = append(images, url)
+		}
+		imgRows.Close()
 
-// 	query := `SELECT service_id, restaurant_id, category_id, service_name, service_description, service_price, created_at, updated_at
-//               FROM Restaurant_Services
-//               WHERE restaurant_id = ?`
-// 	rows, err := config.DB.Query(query, restaurantID)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
+		service.Images = images
+		services = append(services, service)
+	}
 
-// 	for rows.Next() {
-// 		var service restorantmodels.RestaurantService
-// 		if err := rows.Scan(
-// 			&service.ServiceID,
-// 			&service.RestaurantID,
-// 			&service.CategoryId,
-// 			&service.ServiceName,
-// 			&service.ServiceDescription,
-// 			&service.ServicePrice,
-// 			&service.CreatedAt,
-// 			&service.UpdatedAt,
-// 		); err != nil {
-// 			return nil, err
-// 		}
+	return services, nil
+}
 
-// 		// Fetch images for this service
-// 		imgRows, err := config.DB.Query(`SELECT image_url FROM Service_Images WHERE service_id = ?`, service.ServiceID)
-// 		if err != nil {
-// 			return nil, err
-// 		}
 
-// 		var images []string
-// 		for imgRows.Next() {
-// 			var url string
-// 			if err := imgRows.Scan(&url); err != nil {
-// 				imgRows.Close()
-// 				return nil, err
-// 			}
-// 			images = append(images, url)
-// 		}
-// 		imgRows.Close()
 
-// 		service.Images = images
-// 		services = append(services, service)
-// 	}
+func CheckServiceOwner(serviceID string, restaurantID string) (bool, error) {
+	var count int
 
-// 	return services, nil
-// }
+	query := `SELECT COUNT(*) 
+              FROM Our_Services 
+              WHERE service_id = ? 
+              AND proposed_restaurant_id = ?
+              AND is_deleted = 0`
+
+	err := config.DB.QueryRow(query, serviceID, restaurantID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+
+func DeleteServiceWithImages(serviceID string) error {
+	tx, err := config.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Delete images (optional)
+	_, err = tx.Exec(`DELETE FROM Service_Images WHERE service_id = ?`, serviceID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Soft delete service
+	_, err = tx.Exec(`UPDATE Our_Services SET is_deleted = 1 WHERE service_id = ?`, serviceID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}

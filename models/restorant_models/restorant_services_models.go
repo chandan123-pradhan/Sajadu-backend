@@ -14,6 +14,7 @@ type RestaurantService struct {
     CreatedAt          time.Time `json:"created_at"`
     UpdatedAt          time.Time `json:"updated_at"`
     ProposedRestorantId string   `json:"proposed_restorant_id"`
+    DiscountPercent     float64   `json:"discount_percent,omitempty"`
 }
 
 // ServiceImage represents an image associated with a service

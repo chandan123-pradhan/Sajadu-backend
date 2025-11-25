@@ -1,6 +1,7 @@
 package adminserices
 
 import (
+	adminmodel "decoration_project/models/admin_model"
 	restorantmodels "decoration_project/models/restorant_models"
 	adminrepo "decoration_project/repository/admin_repo"
 )
@@ -38,3 +39,26 @@ func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantS
     }
     return services, nil
 }
+
+
+
+func CreateFestival(f adminmodel.Festival) error {
+    return adminrepo.CreateFestival(f)
+}
+
+
+func GetAllFestivals() ([]adminmodel.Festival, error) {
+    return adminrepo.GetAllFestivals()
+}
+
+
+func AddServiceToFestival(festivalID string, serviceID string, discountPercent float64) error {
+    return adminrepo.AddServiceToFestival(festivalID, serviceID, discountPercent)
+}
+
+
+
+func GetFestivalServices(festivalId string) ([]restorantmodels.RestaurantService, error) {
+	return adminrepo.GetFestivalServices(festivalId)
+}
+

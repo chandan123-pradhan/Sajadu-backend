@@ -28,6 +28,10 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/admin/booking-details", admincontroller.GetBookingsDetails).Methods("GET")
 	router.HandleFunc("/admin/update-status", admincontroller.UpdateBookingStatus).Methods("POST")
 	router.HandleFunc("/admin/update-fcm", admincontroller.SetAdminFCMToken).Methods("POST")
+	router.HandleFunc("/admin/festival/create", admincontroller.AddFestival).Methods("POST")
+	router.HandleFunc("/admin/festival/add-service", admincontroller.AddServiceToFestival).Methods("POST")
+	router.HandleFunc("/admin/festival/all", admincontroller.GetAllFestivals).Methods("GET")
+	router.HandleFunc("/admin/festival/services", admincontroller.GetAllFestivalServices).Methods("GET")
 	//User apis.
 	router.HandleFunc("/users/create_account", usercontroller.RegisterUserHandler).Methods("POST")
 	router.HandleFunc("/users/login", usercontroller.LoginUserHandler).Methods("POST")
@@ -46,6 +50,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/users/get-refund", paymentCtrl.RefundHandler).Methods("POST")
 	router.HandleFunc("/users/generate-otp", usercontroller.SentOtp).Methods("POST")
 	router.HandleFunc("/users/login-via-otp", usercontroller.VerifyOtp).Methods("POST")
+	router.HandleFunc("/users/festival-offers", usercontroller.GetAllFestivalOffers).Methods("GET")
 
 	// Restorant APIS.
 
@@ -67,6 +72,9 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/restorant/add-services", restorantcontrollers.AddServiceByRestorant).Methods("POST")
 	router.HandleFunc("/restorant/generate-otp", restorantcontrollers.SentOtp).Methods("POST")
 	router.HandleFunc("/restorant/login-via-otp", restorantcontrollers.VerifyOtp).Methods("POST")
+	router.HandleFunc("/restorant/my-proposed-services", restorantcontrollers.GetRestorantProposedServices).Methods("GET")
+	router.HandleFunc("/restorant/delete-proposed-service", restorantcontrollers.DeleteProposedService).Methods("GET")
+
 	// Staff Apis.
 	router.HandleFunc("/staff/login", staffcontrollers.LoginStaffHandler).Methods("POST")
 	router.HandleFunc("/staff/get-bookings", staffcontrollers.GetAllAssignedBookings).Methods("GET")
