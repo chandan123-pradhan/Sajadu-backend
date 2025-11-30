@@ -46,45 +46,96 @@ func AddServiceImages(serviceID string, images []string) error {
 	return nil
 }
 
-// GetServiceWithImages fetches a single service along with its images
-func GetServiceWithImages(serviceID string) (restorantmodels.RestaurantService, []string, error) {
-	var service restorantmodels.RestaurantService
-	var proposedRestaurantID sql.NullString
-	query := `
-        SELECT service_id, category_id, service_name, service_description, service_price, proposed_restaurant_id
+
+func GetServiceWithImagesAndRestaurant(serviceID string) (
+    restorantmodels.RestaurantService,
+    []string,
+    restorantmodels.RestaurantProfile,
+    []string,
+    error,
+) {
+
+    var service restorantmodels.RestaurantService
+    var proposedRestaurantID sql.NullString
+
+    // 1️⃣ Fetch main service details
+    query := `
+        SELECT service_id, category_id, service_name, service_description,
+               service_price, proposed_restaurant_id
         FROM Our_Services
         WHERE service_id = ?
     `
-	row := config.DB.QueryRow(query, serviceID)
-	err := row.Scan(&service.ServiceID, &service.CategoryId,
-		&service.ServiceName, &service.ServiceDescription, &service.ServicePrice, &proposedRestaurantID)
-	if err != nil {
-		return service, nil, err
-	}
-	if proposedRestaurantID.Valid {
-		service.ProposedRestorantId = proposedRestaurantID.String
-	} else {
-		service.ProposedRestorantId = "" // default empty string
-	}
+    row := config.DB.QueryRow(query, serviceID)
+    err := row.Scan(&service.ServiceID, &service.CategoryId, &service.ServiceName,
+        &service.ServiceDescription, &service.ServicePrice, &proposedRestaurantID)
 
-	// Fetch images
-	rows, err := config.DB.Query(`SELECT image_url FROM Service_Images WHERE service_id = ?`, serviceID)
-	if err != nil {
-		return service, nil, err
-	}
-	defer rows.Close()
+    if err != nil {
+        return service, nil, restorantmodels.RestaurantProfile{}, nil, err
+    }
 
-	var images []string
-	for rows.Next() {
-		var img string
-		if err := rows.Scan(&img); err != nil {
-			return service, nil, err
-		}
-		images = append(images, img)
-	}
+    if proposedRestaurantID.Valid {
+        service.ProposedRestorantId = proposedRestaurantID.String
+    } else {
+        service.ProposedRestorantId = ""
+    }
 
-	return service, images, nil
+    // 2️⃣ Fetch service images
+    rows, err := config.DB.Query(`SELECT image_url FROM Service_Images WHERE service_id = ?`, serviceID)
+    if err != nil {
+        return service, nil, restorantmodels.RestaurantProfile{}, nil, err
+    }
+    defer rows.Close()
+
+    var serviceImages []string
+    for rows.Next() {
+        var img string
+        if err := rows.Scan(&img); err != nil {
+            return service, nil, restorantmodels.RestaurantProfile{}, nil, err
+        }
+        serviceImages = append(serviceImages, img)
+    }
+
+    // If NO proposed_restaurant_id → return service only
+    if service.ProposedRestorantId == "" {
+        return service, serviceImages, restorantmodels.RestaurantProfile{}, nil, nil
+    }
+
+    // 3️⃣ Fetch restaurant profile
+    var restaurant restorantmodels.RestaurantProfile
+    rQuery := `
+        SELECT restaurant_id, name
+        FROM Restaurant_Profile
+        WHERE restaurant_id = ?
+    `
+    rRow := config.DB.QueryRow(rQuery, service.ProposedRestorantId)
+    err = rRow.Scan(&restaurant.RestaurantID, &restaurant.Name)
+    if err != nil {
+        return service, serviceImages, restorantmodels.RestaurantProfile{}, nil, nil
+    }
+
+    // 4️⃣ Fetch restaurant profile images
+    rImgRows, err := config.DB.Query(
+        `SELECT image_url FROM Restaurant_Profile_Images WHERE restaurant_id = ?`,
+        restaurant.RestaurantID,
+    )
+    if err != nil {
+        return service, serviceImages, restaurant, nil, nil
+    }
+    defer rImgRows.Close()
+
+    var restaurantImages []string
+    for rImgRows.Next() {
+        var img string
+        if err := rImgRows.Scan(&img); err != nil {
+            return service, serviceImages, restaurant, nil, err
+        }
+        restaurantImages = append(restaurantImages, img)
+    }
+
+    return service, serviceImages, restaurant, restaurantImages, nil
 }
+
+
 
 // GetAllServicesWithImages fetches all non-deleted services for a category with images
 func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantService, error) {

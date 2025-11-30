@@ -87,46 +87,49 @@ func AddService(w http.ResponseWriter, r *http.Request) {
 	utils.SendResponse(w, http.StatusCreated, true, response, "Service created successfully")
 }
 
-
-
 // ======================================================
-//                 GET SERVICE DETAILS
+//                 GET SERVICE DETAILS (FIXED)
 // ======================================================
 
-// GetServiceDetails returns full details of a specific service.
-// Requires:
-//   - Query param: service_id
-//
-// Returns:
-//   - Basic details + images + timestamps
 func GetServiceDetails(w http.ResponseWriter, r *http.Request) {
 
-	serviceID := r.URL.Query().Get("service_id")
-	if serviceID == "" {
-		utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "service_id query parameter is required")
-		return
-	}
+    serviceID := r.URL.Query().Get("service_id")
+    if serviceID == "" {
+        utils.SendResponse(w, http.StatusBadRequest, false, map[string]interface{}{}, "service_id query parameter is required")
+        return
+    }
 
-	service, err := adminserices.GetServicesDetails(serviceID)
-	if err != nil {
-		utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, err.Error())
-		return
-	}
+    // Correct: Only 2 return values
+    details, err := adminserices.GetServicesDetails(serviceID)
+    if err != nil {
+        utils.SendResponse(w, http.StatusInternalServerError, false, map[string]interface{}{}, err.Error())
+        return
+    }
 
-	response := map[string]interface{}{
-		"service_id":           service.ServiceID,
-		"category_id":          service.CategoryId,
-		"service_name":         service.ServiceName,
-		"service_description":  service.ServiceDescription,
-		"service_price":        service.ServicePrice,
-		"images":               service.Images,
-		"created_at":           service.CreatedAt,
-		"updated_at":           service.UpdatedAt,
-		"proposed_restorant_id": service.ProposedRestorantId,
-	}
+    // Base service response
+    response := map[string]interface{}{
+        "service_id":            details.Service.ServiceID,
+        "category_id":           details.Service.CategoryId,
+        "service_name":          details.Service.ServiceName,
+        "service_description":   details.Service.ServiceDescription,
+        "service_price":         details.Service.ServicePrice,
+        "images":                details.Service.Images,
+        "created_at":            details.Service.CreatedAt,
+        "updated_at":            details.Service.UpdatedAt,
+    }
 
-	utils.SendResponse(w, http.StatusOK, true, response, "Service details fetched successfully")
+    // Add restaurant profile only if exists
+    if details.RestaurantProfile.RestaurantID != "" {
+        response["restaurant_profile"] = map[string]interface{}{
+            "restaurant_id": details.RestaurantProfile.RestaurantID,
+            "name":          details.RestaurantProfile.Name,
+            "images":        details.RestaurantProfile.Images,
+        }
+    }
+
+    utils.SendResponse(w, http.StatusOK, true, response, "Service details fetched successfully")
 }
+
 
 
 

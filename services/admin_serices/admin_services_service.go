@@ -22,14 +22,36 @@ func CreateService(service restorantmodels.RestaurantService, images []string) (
     return serviceID, nil
 }
 
-func GetServicesDetails(serviceID string) (restorantmodels.RestaurantService, error) {
-    service, images, err := adminrepo.GetServiceWithImages(serviceID)
+
+func GetServicesDetails(serviceID string) (adminmodel.ServiceDetailsResponse, error) {
+    // Step 1: Fetch service + service images + restaurant profile data
+    service, serviceImages, restaurantProfile, restaurantImages, err :=
+        adminrepo.GetServiceWithImagesAndRestaurant(serviceID)
+
     if err != nil {
-        return service, err
+        return adminmodel.ServiceDetailsResponse{}, err
     }
-    service.Images = images
-    return service, nil
+
+    // Step 2: Attach service images
+    service.Images = serviceImages
+
+    // Step 3: Prepare final response object
+    response := adminmodel.ServiceDetailsResponse{
+        Service: service,
+    }
+
+    // Step 4: Add restaurant only if exists
+    if restaurantProfile.RestaurantID != "" {
+        response.RestaurantProfile = adminmodel.RestaurantProfileResponse{
+            RestaurantID: restaurantProfile.RestaurantID,
+            Name:         restaurantProfile.Name,
+            Images:       restaurantImages,
+        }
+    }
+
+    return response, nil
 }
+
 
 func GetAllServiceCategoryWise(categoryId string) ([]restorantmodels.RestaurantService, error) {
     // Fetch all services with images from repository
