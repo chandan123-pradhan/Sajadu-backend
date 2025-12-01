@@ -75,7 +75,7 @@ func GetServicesByCategory(categoryID string) ([]restorantmodels.RestaurantServi
 
 func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant, error) {
 	var result restorantmodels.ServiceWithRestaurant
-
+var proposedID sql.NullString
 	// Fetch service details including average_rating
 	query := `
 		SELECT 
@@ -92,13 +92,20 @@ func GetServiceDetails(serviceID string) (restorantmodels.ServiceWithRestaurant,
 		&result.Service.ServiceDescription,
 		&result.Service.ServicePrice,
 		&result.Service.AverageRating,
-		&result.Service.ProposedRestorantId,
+		&proposedID,
 		&result.Service.CreatedAt,
 		&result.Service.UpdatedAt,
 	)
 	if err != nil {
 		return result, err
 	}
+	// 🟢 Assign empty string if NULL
+	if proposedID.Valid {
+		result.Service.ProposedRestorantId = proposedID.String
+	} else {
+		result.Service.ProposedRestorantId = ""
+	}
+
 
 	// Fetch service images
 	imageRows, err := config.DB.Query("SELECT image_url FROM Service_Images WHERE service_id = ?", result.Service.ServiceID)
