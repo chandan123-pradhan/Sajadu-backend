@@ -21,6 +21,7 @@ type RestorantBookingsResponse struct {
 	City          string           `json:"city"`
 	CreatedAt     time.Time        `json:"created_at"`
 	Payment       *usermodels.PaymentResponse `json:"payment,omitempty"` // nil if no payment
+	IsStaffAssigned bool `json:"is_staff_assigned"`
 }
 
 

@@ -28,6 +28,7 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			b.created_at,
 			b.start_otp_hash,  -- Encrypted OTP for staff verification
 			rs.service_description,  -- added service description
+			b.staff_id,
 
 			-- Payment details (may be NULL if no payment yet)
 			p.payment_id,
@@ -46,6 +47,8 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 	`
 
 	rows, err := config.DB.Query(query, restaurantID)
+	var staffID sql.NullString
+
 	if err != nil {
 		return restorantmodels.RestaurantBookingsWrapper{Bookings: []restorantmodels.RestorantBookingsResponse{}}, err
 	}
@@ -75,8 +78,9 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			&booking.ServiceName,
 			&booking.Price,
 			&booking.CreatedAt,
-			&startOTP,  
-			&serviceDesc,  // scan service description
+			&startOTP,
+			&serviceDesc,
+			&staffID,
 			&paymentID,
 			&amount,
 			&currency,
@@ -94,6 +98,11 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 			booking.ServiceDesc = serviceDesc.String
 		} else {
 			booking.ServiceDesc = ""
+		}
+		if booking.Status == "Accepted" && staffID.Valid {
+			booking.IsStaffAssigned = true
+		} else {
+			booking.IsStaffAssigned = false
 		}
 
 		// Populate payment details if exists
@@ -133,7 +142,6 @@ func GetRestaurantBookings(restaurantID string, key string) (restorantmodels.Res
 
 	return restorantmodels.RestaurantBookingsWrapper{Bookings: bookings}, nil
 }
-
 
 // GetRestaurantBookingDetails fetches full details of a specific booking
 func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.BookingDetailsResponse, error) {
@@ -209,7 +217,7 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 
 		&booking.ServiceID,
 		&booking.ServiceName,
-		&serviceDescription,   // scanned service_description
+		&serviceDescription, // scanned service_description
 		&booking.Price,
 
 		&booking.Status,
@@ -296,7 +304,6 @@ func GetRestaurantBookingDetails(bookingID, key string) (restorantmodels.Booking
 	return booking, nil
 }
 
-
 // AcceptBooking generates staff OTP and updates booking status to Accepted
 func AcceptBooking(bookingID string, acceptedStatusID int, key string) (string, error) {
 	otp := utils.GenerateOTP()
@@ -381,10 +388,6 @@ func VerifyStartOTP(bookingID string, inputOTP string, inProgressStatusID int, k
 
 	return nil
 }
-
-
-
-
 
 //assign booking to staff
 
