@@ -32,6 +32,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/admin/festival/add-service", admincontroller.AddServiceToFestival).Methods("POST")
 	router.HandleFunc("/admin/festival/all", admincontroller.GetAllFestivals).Methods("GET")
 	router.HandleFunc("/admin/festival/services", admincontroller.GetAllFestivalServices).Methods("GET")
+	router.HandleFunc("/admin/users", admincontroller.GetAllUsers).Methods("GET")
 	//User apis.
 	router.HandleFunc("/users/create_account", usercontroller.RegisterUserHandler).Methods("POST")
 	router.HandleFunc("/users/login", usercontroller.LoginUserHandler).Methods("POST")
