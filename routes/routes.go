@@ -3,6 +3,7 @@ package routes
 import (
 	"decoration_project/controllers"
 	admincontroller "decoration_project/controllers/admin_controller"
+	earningcontroller "decoration_project/controllers/earning_controller"
 	paymentcontroller "decoration_project/controllers/payment_controller"
 	restorantcontrollers "decoration_project/controllers/restorant_controllers"
 	staffcontrollers "decoration_project/controllers/staff_controllers"
@@ -33,6 +34,7 @@ func InitializeRoutes() http.Handler {
 	router.HandleFunc("/admin/festival/all", admincontroller.GetAllFestivals).Methods("GET")
 	router.HandleFunc("/admin/festival/services", admincontroller.GetAllFestivalServices).Methods("GET")
 	router.HandleFunc("/admin/users", admincontroller.GetAllUsers).Methods("GET")
+	router.HandleFunc("/admin/get-earnings", earningcontroller.NewEarningsController().GetEarningsHandler).Methods("GET")
 	//User apis.
 	router.HandleFunc("/users/create_account", usercontroller.RegisterUserHandler).Methods("POST")
 	router.HandleFunc("/users/login", usercontroller.LoginUserHandler).Methods("POST")
